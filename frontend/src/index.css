@@ -1,0 +1,128 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap");
+* {
+  box-sizing: border-box;
+  font-family: "Montserrat", serif;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #d0cdcd;
+}
+/*===============Nav bar style=================*/
+.navbar {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  background-color: #007aff;
+  height: 50px;
+}
+.navlink {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  margin: 10px;
+}
+.navlink:hover {
+  border-bottom: 2px solid white;
+}
+/*================================================*/
+
+/*===============Tables style=================*/
+table,
+th,
+td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+th,
+td {
+  padding: 10px;
+  font-size: larger;
+}
+thead {
+  background: #007aff;
+  color: white;
+}
+/*============================================*/
+
+/*============Products page styling===========*/
+.product-list-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 100px;
+}
+.products-table-container {
+  background: #d9d9d9;
+  padding-top: 10px;
+  padding-left: 15px;
+  padding-right: 15px;
+  padding-bottom: 20px;
+  border-radius: 14px;
+}
+.products-summary-main-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.add-product-form-container,
+.product-summary-card-container {
+  background: #d9d9d9;
+  margin-top: 15px;
+  padding-left: 15px;
+  padding-right: 15px;
+  padding-bottom: 15px;
+  border-radius: 15px;
+}
+.product-form-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+/*============================================*/
+
+/*============Employees page styling===========*/
+.employees-list-main-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 100px;
+}
+.employees-table-container {
+  background: #d9d9d9;
+  padding: 20px;
+  border-radius: 15px;
+}
+.employee-card {
+  background: #d9d9d9;
+  padding: 15px;
+  border-radius: 15px;
+}
+.employee-card span {
+  font-weight: bold;
+}
+.employee-card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.create-user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.add-employee-form-container {
+  background: #d9d9d9;
+  padding-left: 15px;
+  padding-right: 15px;
+  border-radius: 15px;
+  padding-bottom: 15px;
+}
+/*============================================*/
