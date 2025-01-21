@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import products, purchase_orders, counter_sales,restock_orders,profile
+from .models import products, purchase_orders, counter_sales,restock_orders,Profile
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -11,7 +11,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        model = profile
+        model = Profile
         fields = ['phone','role']
 
 class UserProfileSerializer(serializers.ModelSerializer):

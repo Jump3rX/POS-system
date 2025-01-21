@@ -5,7 +5,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import ProductsSerializer, UserSerializer,ProfileSerializer,UserProfileSerializer
-from .models import products
+from .models import products,Profile
 # Create your views here.
 
 @api_view(['GET'])
@@ -110,7 +110,50 @@ def employees(request):
     serializer = UserProfileSerializer(employees,many=True)
     return Response(serializer.data)
 
-@api_view()
+@api_view(['PUT'])
 def edit_employee(request,id):
+    try:
+        user = User.objects.get(id=id)
+    except user.DoesNotExist:
+        return Response({'error':'user not found'},status=status.HTTP_404_NOT_FOUND)
     
-    pass
+    try:
+        profile = Profile.objects.get(user=user)
+    except profile.DoesNotExist:
+        print("Profile not found!")
+    
+    user_data = {
+        'username':request.data.get('username'),
+        'first_name':request.data.get('first_name'),
+        'last_name':request.data.get('last_name')
+    }
+    user_serializer = UserSerializer(user,data=user_data,partial=True)
+    if user_serializer.is_valid():
+        user_serializer.save()
+    else:
+        return Response(user_serializer.error,status=status.HTTP_400_BAD_REQUEST)
+    
+    if profile:
+        profile_data = {
+            'phone':request.data.get('phone'),
+            'role':request.data.get('role'),
+        }
+        profile_serializer = ProfileSerializer(profile,data=profile_data,partial=True)
+        if profile_serializer.is_valid():
+            profile_serializer.save()
+        else:
+            return Response(profile_serializer.error,status=status.HTTP_400_BAD_REQUEST)
+    else:
+        profile_data = 'Profile not found'
+    response_data = {
+        "id": user.id,
+        "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "profile": {
+            "phone": profile_data['phone'] if profile_data else None,
+            "role": profile_data['role'] if profile_data else None,
+        } if profile_data else None,
+    }
+    
+    return Response(response_data,status=status.HTTP_200_OK)
