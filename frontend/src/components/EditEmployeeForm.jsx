@@ -1,7 +1,9 @@
 import React from "react";
-import { useState } from "react";
+import { useState, useContext } from "react";
+import AuthContext from "../context/AuthContext";
 
 function EditEmployeeForm({ employee, handleSaveEmployee, closeModal }) {
+  let { authTokens, logoutUser } = useContext(AuthContext);
   const [newData, setNewData] = useState({
     username: employee.username,
     first_name: employee.first_name,
@@ -14,14 +16,20 @@ function EditEmployeeForm({ employee, handleSaveEmployee, closeModal }) {
     e.preventDefault();
     fetch(`http://127.0.0.1:8000/api/edit-employee/${employee.id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + String(authTokens.access),
+      },
       body: JSON.stringify(newData),
     })
       .then((res) => {
         if (!res.ok) {
           throw new Error("Failed to update!");
+        } else if (res.statusText === "Unauthorized") {
+          logoutUser();
+        } else {
+          return res.json();
         }
-        return res.json();
       })
       .then((data) => handleSaveEmployee(data));
   }

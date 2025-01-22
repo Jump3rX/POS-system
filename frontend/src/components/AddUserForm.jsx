@@ -1,7 +1,9 @@
 import React from "react";
-import { useState } from "react";
+import { useState, useContext } from "react";
+import AuthContext from "../context/AuthContext";
 
 function AddUserForm({ handleAddNewUser }) {
+  let { authTokens, logoutUser } = useContext(AuthContext);
   const [user, setUser] = useState({
     username: "",
     first_name: "",
@@ -12,6 +14,7 @@ function AddUserForm({ handleAddNewUser }) {
   });
   function handleAddUser(e) {
     e.preventDefault();
+
     if (
       user.username &&
       user.first_name &&
@@ -22,10 +25,21 @@ function AddUserForm({ handleAddNewUser }) {
     ) {
       fetch("http://127.0.0.1:8000/api/create-user", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + String(authTokens.access),
+        },
         body: JSON.stringify(user),
       })
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error("Failed to update!");
+          } else if (res.statusText === "Unauthorized") {
+            logoutUser();
+          } else {
+            return res.json();
+          }
+        })
         .then((newUserData) => {
           handleAddNewUser(newUserData);
 
