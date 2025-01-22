@@ -1,6 +1,10 @@
 import React from "react";
-import { useState } from "react";
+import { useState, useContext } from "react";
+import AuthContext from "../context/AuthContext";
+
 function EditProductModal({ product, handleSave, closeModal }) {
+  let { authTokens, logoutUser } = useContext(AuthContext);
+
   const [newProduct, setNewProduct] = useState({
     product_code: product.product_code,
     product_name: product.product_name,
@@ -8,16 +12,25 @@ function EditProductModal({ product, handleSave, closeModal }) {
     product_price: product.product_price,
     stock_quantity: product.stock_quantity,
   });
+
   function saveProduct(e) {
     e.preventDefault();
     fetch(`http://127.0.0.1:8000/api/edit-product/${product.id}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + String(authTokens.access),
+      },
       body: JSON.stringify(newProduct),
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to save");
-        return res.json();
+        if (!res.ok) {
+          throw new Error("Failed to save");
+        } else if (res.statusText === "Unauthorized") {
+          logoutUser();
+        } else {
+          return res.json();
+        }
       })
       .then((updatedProduct) => {
         handleSave(updatedProduct);

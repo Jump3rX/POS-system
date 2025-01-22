@@ -1,19 +1,35 @@
 import React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import ProductsTable from "../components/ProductsTable";
 import ProductsSummaryCard from "../components/ProductsSummaryCard";
 import AddProductForm from "../components/AddProductForm";
 import EditProductModal from "../components/EditProductModal";
+import AuthContext from "../context/AuthContext";
 
 function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
+  let { authTokens, logoutUser } = useContext(AuthContext);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/products")
-      .then((res) => res.json())
-      .then((data) => setProducts(data));
+    fetch("http://127.0.0.1:8000/api/products", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + String(authTokens.access),
+      },
+    })
+      .then((res) => {
+        if (res.status === 200) {
+          return res.json();
+        } else if (res.statusText === "Unauthorized") {
+          logoutUser();
+        }
+      })
+      .then((data) => {
+        setProducts(data);
+      });
   }, []);
   let totalProducts = products.length;
 
@@ -25,6 +41,10 @@ function ProductsPage() {
     if (window.confirm("Are you sure you want to delete this product?")) {
       fetch(`http://127.0.0.1:8000/api/delete-product/${id}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + String(authTokens.access),
+        },
       })
         .then((res) => {
           if (!res.ok) {

@@ -1,12 +1,31 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.contrib.auth.models import User
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view,permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import ProductsSerializer, UserSerializer,ProfileSerializer,UserProfileSerializer
 from .models import products,Profile
+from rest_framework.permissions import IsAuthenticated
+
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
 # Create your views here.
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Add custom claims
+        token['username'] = user.username
+        token['role'] = user.profile.role 
+        # ...
+
+        return token
+    
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
 
 @api_view(['GET'])
 def index(request):
@@ -25,6 +44,7 @@ def index(request):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def products_list(request):
     all_products = products.objects.all()
     product_list = ProductsSerializer(all_products,many=True)
@@ -33,6 +53,7 @@ def products_list(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_product(request):
     save_data = ProductsSerializer(data=request.data)
     if save_data.is_valid():
@@ -42,6 +63,7 @@ def add_product(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def edit_product(request,id):
     product = products.objects.get(id=id)
     product_data = ProductsSerializer(instance=product,data=request.data)
@@ -50,6 +72,7 @@ def edit_product(request,id):
     return Response(product_data.data)
 
 @api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def delete_product(request,id):
     product = products.objects.get(id=id)
     product.delete()
@@ -58,6 +81,7 @@ def delete_product(request,id):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def create_user(request):
     user_data = {
         'username':request.data.get('username'),
@@ -97,6 +121,7 @@ def create_user(request):
         
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def deactivate_user(request,id):
     user = User.objects.get(id=id)
     user.is_active = False
@@ -104,6 +129,7 @@ def deactivate_user(request,id):
     return Response(status=status.HTTP_200_OK)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def employees(request):
     excluded = ['root','customer']
     employees = User.objects.exclude(profile__role__in = excluded).exclude(is_superuser=True).exclude(is_active=False)
@@ -111,6 +137,7 @@ def employees(request):
     return Response(serializer.data)
 
 @api_view(['PUT'])
+@permission_classes([IsAuthenticated])
 def edit_employee(request,id):
     try:
         user = User.objects.get(id=id)

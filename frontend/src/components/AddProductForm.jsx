@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
+import AuthContext from "../context/AuthContext";
 
 function AddProductForm({ handleAddNewProduct }) {
+  let { authTokens, logoutUser } = useContext(AuthContext);
   const [product, setProduct] = useState({
     product_code: "",
     product_name: "",
@@ -20,10 +22,21 @@ function AddProductForm({ handleAddNewProduct }) {
     ) {
       fetch("http://127.0.0.1:8000/api/add-product", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + String(authTokens.access),
+        },
         body: JSON.stringify(product),
       })
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error("Failed to update!");
+          } else if (res.statusText === "Unauthorized") {
+            logoutUser();
+          } else {
+            return res.json();
+          }
+        })
         .then((newProducts) => {
           handleAddNewProduct(newProducts);
           setProduct({
