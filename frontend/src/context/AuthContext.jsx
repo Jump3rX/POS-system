@@ -33,11 +33,19 @@ export const AuthProvider = ({ children }) => {
     let data = await resp.json();
     if (resp.status === 200) {
       setAuthTokens(data);
-      setUser(jwtDecode(data.access));
+      let decodeToken = jwtDecode(data.access);
+      setUser(decodeToken);
       localStorage.setItem("authTokens", JSON.stringify(data));
-      navigate("/admin");
+
+      if (decodeToken.role === "admin") {
+        navigate("/admin");
+      } else if (decodeToken.role === "cashier") {
+        navigate("/cashier-dashboard");
+      } else {
+        navigate("/");
+      }
     } else {
-      alert("something went wrong");
+      alert("Invalid credentials, try again!");
     }
   };
   let updateToken = async () => {

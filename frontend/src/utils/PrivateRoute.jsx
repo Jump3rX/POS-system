@@ -3,9 +3,15 @@ import { Navigate } from "react-router-dom";
 import { useContext } from "react";
 import AuthContext from "../context/AuthContext";
 
-function PrivateRoute({ children, ...rest }) {
+function PrivateRoute({ children, requiredRole, ...rest }) {
   let { user } = useContext(AuthContext);
-  return user ? children : <Navigate to="/" />;
+  if (!user) {
+    return <Navigate to="/" />;
+  }
+  if (requiredRole && user.role !== requiredRole) {
+    return alert("Unauthorized access!");
+  }
+  return children;
 }
 
 export default PrivateRoute;

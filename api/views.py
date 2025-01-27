@@ -10,6 +10,8 @@ from rest_framework.permissions import IsAuthenticated
 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
+
+from .permissions import isAdminRole
 # Create your views here.
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -44,7 +46,7 @@ def index(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,isAdminRole])
 def products_list(request):
     all_products = products.objects.all()
     product_list = ProductsSerializer(all_products,many=True)
@@ -53,7 +55,7 @@ def products_list(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,isAdminRole])
 def add_product(request):
     save_data = ProductsSerializer(data=request.data)
     if save_data.is_valid():
@@ -63,7 +65,8 @@ def add_product(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,isAdminRole])
+
 def edit_product(request,id):
     product = products.objects.get(id=id)
     product_data = ProductsSerializer(instance=product,data=request.data)
@@ -72,7 +75,8 @@ def edit_product(request,id):
     return Response(product_data.data)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,isAdminRole])
+
 def delete_product(request,id):
     product = products.objects.get(id=id)
     product.delete()
@@ -81,7 +85,7 @@ def delete_product(request,id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,isAdminRole])
 def create_user(request):
     user_data = {
         'username':request.data.get('username'),
@@ -91,7 +95,7 @@ def create_user(request):
     }
     profile_data = {
         'phone':request.data.get('phone'),
-        'role':request.data.get('role')
+        'role':request.data.get('role').lower()
     }
     user_serializer = UserSerializer(data=user_data)
     if user_serializer.is_valid():
@@ -121,7 +125,7 @@ def create_user(request):
         
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,isAdminRole])
 def deactivate_user(request,id):
     user = User.objects.get(id=id)
     user.is_active = False
@@ -129,7 +133,7 @@ def deactivate_user(request,id):
     return Response(status=status.HTTP_200_OK)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,isAdminRole])
 def employees(request):
     excluded = ['root','customer']
     employees = User.objects.exclude(profile__role__in = excluded).exclude(is_superuser=True).exclude(is_active=False)
@@ -137,7 +141,7 @@ def employees(request):
     return Response(serializer.data)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,isAdminRole])
 def edit_employee(request,id):
     try:
         user = User.objects.get(id=id)
