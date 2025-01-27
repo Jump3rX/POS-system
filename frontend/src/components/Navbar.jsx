@@ -7,19 +7,33 @@ function Navbar() {
     <div className="navbar">
       {user ? (
         <>
-          <p>{user.username}</p>
-          <Link to="/admin" className="navlink">
-            Home
-          </Link>
-          <Link to="/customers" className="navlink">
-            Customers
-          </Link>
-          <Link to="/products" className="navlink">
-            Products
-          </Link>
-          <Link to="/employees" className="navlink">
-            Employees
-          </Link>
+          {user.role === "admin" && (
+            <>
+              <Link to="/admin" className="navlink">
+                Home
+              </Link>
+              <Link to="/customers" className="navlink">
+                Customers
+              </Link>
+              <Link to="/products" className="navlink">
+                Products
+              </Link>
+              <Link to="/employees" className="navlink">
+                Employees
+              </Link>
+            </>
+          )}
+          {user.role === "cashier" && (
+            <>
+              <Link to="/cashier-dashboard" className="navlink">
+                Dashboard
+              </Link>
+              <Link to="/cashier-sales" className="navlink">
+                Sales
+              </Link>
+            </>
+          )}
+
           <Link
             to="/"
             className="navlink"

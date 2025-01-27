@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
-import PrivateRoute from "./utils/PriVateRoute";
+import PrivateRoute from "./utils/PrivateRoute";
 import LoginPage from "./pages/LoginPage";
 import AdminHome from "./pages/AdminHome";
 import Customers from "./pages/Customers";
 import ProductsPage from "./pages/ProductsPage";
+import CashierDashboard from "./pages/CashierDashboard";
+import CashierSales from "./pages/CashierSales";
 import Home from "./pages/Home";
 import Employees from "./pages/Employees";
 import { Layout } from "./Layout";
@@ -20,7 +22,7 @@ function App() {
               <Route
                 path="/admin"
                 element={
-                  <PrivateRoute>
+                  <PrivateRoute requiredRole="admin">
                     <AdminHome />
                   </PrivateRoute>
                 }
@@ -28,7 +30,7 @@ function App() {
               <Route
                 path="/customers"
                 element={
-                  <PrivateRoute>
+                  <PrivateRoute requiredRole="admin">
                     <Customers />
                   </PrivateRoute>
                 }
@@ -36,7 +38,7 @@ function App() {
               <Route
                 path="/products"
                 element={
-                  <PrivateRoute>
+                  <PrivateRoute requiredRole="admin">
                     <ProductsPage />
                   </PrivateRoute>
                 }
@@ -44,8 +46,24 @@ function App() {
               <Route
                 path="/employees"
                 element={
-                  <PrivateRoute>
+                  <PrivateRoute requiredRole="admin">
                     <Employees />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/cashier-dashboard"
+                element={
+                  <PrivateRoute requiredRole="cashier">
+                    <CashierDashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/cashier-sales"
+                element={
+                  <PrivateRoute requiredRole="cashier">
+                    <CashierSales />
                   </PrivateRoute>
                 }
               />
