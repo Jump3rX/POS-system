@@ -24,6 +24,12 @@ body {
   text-decoration: none;
   font-weight: bold;
   margin: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.navlink-icon {
+  width: 20px;
 }
 .navlink:hover {
   border-bottom: 2px solid white;
@@ -53,11 +59,12 @@ thead {
   display: flex;
   flex-direction: row;
   justify-content: center;
-  align-items: center;
+  align-items: start;
+  margin: 20px;
   gap: 100px;
 }
 .products-table-container {
-  background: #d9d9d9;
+  background: #ebebeb;
   padding-top: 10px;
   padding-left: 15px;
   padding-right: 15px;
@@ -71,8 +78,7 @@ thead {
 }
 .add-product-form-container,
 .product-summary-card-container {
-  background: #d9d9d9;
-  margin-top: 15px;
+  background: #ebebeb;
   padding-left: 15px;
   padding-right: 15px;
   padding-bottom: 15px;
@@ -84,6 +90,41 @@ thead {
   gap: 10px;
   margin-bottom: 10px;
 }
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-content {
+  background-color: #ebebeb;
+  padding: 20px;
+}
+.modal-content form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.modal-content form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.edit-product-form-input {
+  padding: 5px;
+  width: 250px;
+  margin-top: 0px;
+}
+.modal-content form label {
+  margin-bottom: 0px;
+}
 /*============================================*/
 
 /*============Employees page styling===========*/
@@ -91,16 +132,17 @@ thead {
   display: flex;
   flex-direction: row;
   justify-content: center;
-  align-items: center;
+  align-items: start;
+  margin-top: 20px;
   gap: 100px;
 }
 .employees-table-container {
-  background: #d9d9d9;
+  background: #ebebeb;
   padding: 20px;
   border-radius: 15px;
 }
 .employee-card {
-  background: #d9d9d9;
+  background: #ebebeb;
   padding: 15px;
   border-radius: 15px;
 }
@@ -119,15 +161,33 @@ thead {
   gap: 10px;
 }
 .add-employee-form-container {
-  background: #d9d9d9;
+  background: #ebebeb;
   padding-left: 15px;
   padding-right: 15px;
   border-radius: 15px;
   padding-bottom: 15px;
 }
+.employee-edit-form-container {
+  background-color: #ebebeb;
+  padding: 20px;
+  border-radius: 13px;
+}
+.employee-edit-form-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 /*============================================*/
 
 /*===============Login page styling===========*/
+.logo-container {
+  width: 150px;
+  margin-bottom: 15px;
+}
+.logo-container img {
+  width: 100%;
+  border-radius: 50%;
+}
 .login-page-container {
   display: flex;
   flex-direction: column;
@@ -157,5 +217,216 @@ thead {
   width: 220px;
   border-radius: 12px;
   border: 2px;
+}
+.login-btn {
+  padding: 5px;
+  border-radius: 12px;
+  border: 1px;
+  transition: all 0.2s;
+}
+.login-btn:hover {
+  box-shadow: 0 0 5px 1px #5d95d1;
+}
+/*============================================*/
+
+/*=========Cashier Sales page styling=========*/
+
+.sales-page-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: center;
+}
+.sales-list-container {
+  background-color: #ebebeb;
+  padding: 15px;
+  border-radius: 13px;
+}
+.sales-summary-container {
+  background-color: #ebebeb;
+  padding: 15px;
+  border-radius: 13px;
+}
+.search-product-container {
+  margin-bottom: 20px;
+}
+.search-product-input {
+  width: 65%;
+  padding: 8px;
+}
+/*============================================*/
+
+/*======Cashier Dashboard page styling========*/
+.cashier-dashboard-container {
+  display: flex;
+  flex-direction: column;
+}
+.cashier-dashboard-cards {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  margin-top: 10px;
+}
+.cashier-card {
+  background-color: #ebebeb;
+  padding: 20px;
+  border-radius: 13px;
+  width: 23%;
+}
+.cashier-card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.sales-statistics {
+  background-color: #ebebeb;
+  margin-top: 15px;
+  border-radius: 13px;
+  padding: 20px;
+  height: max-content;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.chart-container h1 {
+  text-align: center;
+}
+/*============================================*/
+
+/*=============Admin Page Styling=============*/
+.admin-page-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: start;
+  margin-top: 10px;
+}
+.left-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.left-section-cards {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  gap: 30px;
+}
+.left-section-card {
+  background-color: #ebebeb;
+  padding: 10px;
+  border-radius: 13px;
+  width: 100%;
+}
+.left-section-card h2 {
+  text-align: center;
+}
+.info-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.info-section1,
+.info-section2 {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.small-gray {
+  font-size: small;
+  color: #888585;
+  margin-bottom: 0px;
+}
+.bold-black {
+  font-weight: 600;
+  margin-top: 0;
+  font-size: larger;
+}
+.info1,
+.info2 {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.sales-info-section {
+  width: auto;
+}
+.sales-info-container {
+  width: fit-content;
+  background-color: #ebebeb;
+  padding: 20px;
+  border-radius: 13px;
+  margin-top: 20px;
+}
+.right-section-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.right-section-card {
+  background-color: #ebebeb;
+  padding: 15px;
+  border-radius: 13px;
+}
+.card-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+/*============================================*/
+
+/*===============Sales Admin Page=============*/
+.sales-list-table {
+  background-color: #ebebeb;
+  padding: 20px;
+  margin-top: 15px;
+  border-radius: 13px;
+}
+/*============================================*/
+
+/*===============Customers Page=============*/
+.customers-page-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: start;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.customers-list-container {
+  background-color: #ebebeb;
+  padding: 20px;
+  border-radius: 13px;
+}
+.customer-info {
+  background-color: #ebebeb;
+  padding: 20px;
+  border-radius: 13px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.customer-info-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.info-container {
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+}
+.info-1,
+.info-2 {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 /*============================================*/
