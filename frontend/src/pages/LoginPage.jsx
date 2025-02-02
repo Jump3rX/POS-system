@@ -1,5 +1,6 @@
 import React, { useContext } from "react";
 import AuthContext from "../context/AuthContext";
+import logo from "../assets/logo.png";
 
 function LoginPage() {
   let { loginUser } = useContext(AuthContext);
@@ -8,6 +9,9 @@ function LoginPage() {
     <div className="login-page-container">
       <div className="login-page-form">
         <h2>POS Login</h2>
+        <div className="logo-container">
+          <img src={logo} alt="logo" />
+        </div>
         <form action="" onSubmit={loginUser} className="login-form">
           <input
             type="text"
@@ -21,7 +25,9 @@ function LoginPage() {
             placeholder="Your password"
             className="login-form-input"
           />
-          <button type="submit">Login</button>
+          <button type="submit" className="login-btn">
+            Login
+          </button>
         </form>
       </div>
     </div>

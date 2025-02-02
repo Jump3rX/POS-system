@@ -41,51 +41,63 @@ function EditProductModal({ product, handleSave, closeModal }) {
     <div className="modal">
       <div className="modal-content">
         <h2>Edit Product</h2>
+        <hr />
         <form onSubmit={saveProduct}>
+          <label htmlFor="code">Product Code</label>
           <input
             type="number"
-            className="product-code-input"
+            className="edit-product-form-input"
             placeholder="Product Code"
             value={newProduct.product_code}
             onChange={(e) =>
               setNewProduct({ ...newProduct, product_code: e.target.value })
             }
+            id="code"
           />
+          <label htmlFor="name">Product Name</label>
           <input
             type="text"
-            className="product-name-input"
+            className="edit-product-form-input"
             placeholder="Product Name"
             value={newProduct.product_name}
             onChange={(e) =>
               setNewProduct({ ...newProduct, product_name: e.target.value })
             }
+            id="name"
           />
+          <label htmlFor="category">Product Category</label>
           <input
             type="text"
-            className="product-category-input"
+            className="edit-product-form-input"
             placeholder="Product Category"
             value={newProduct.product_category}
             onChange={(e) =>
               setNewProduct({ ...newProduct, product_category: e.target.value })
             }
+            id="category"
           />
+
+          <label htmlFor="price">Product Price</label>
           <input
             type="number"
-            className="product-price-input"
+            className="edit-product-form-input"
             placeholder="Price per item"
             value={newProduct.product_price}
             onChange={(e) =>
               setNewProduct({ ...newProduct, product_price: e.target.value })
             }
+            id="price"
           />
+          <label htmlFor="quantity">Product Quantity</label>
           <input
             type="text"
-            className="product-stock-input"
+            className="edit-product-form-input"
             placeholder="Stock Quantity"
             value={newProduct.stock_quantity}
             onChange={(e) =>
               setNewProduct({ ...newProduct, stock_quantity: e.target.value })
             }
+            id="quantity"
           />
           <button type="submit">Save</button>
           <button type="button" onClick={closeModal}>

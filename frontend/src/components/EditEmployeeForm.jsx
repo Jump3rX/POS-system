@@ -35,50 +35,65 @@ function EditEmployeeForm({ employee, handleSaveEmployee, closeModal }) {
   }
   return (
     <>
-      <div className="employee-edit-form-container">
-        <h2>Edit Employee</h2>
-        <form action="" onSubmit={updateEmployee}>
-          <input
-            type="text"
-            placeholder="Username"
-            value={employee.username}
-            onChange={(e) =>
-              setNewData({ ...newData, username: e.target.value })
-            }
-          />
-          <input
-            type="text"
-            placeholder="Firstname"
-            value={newData.first_name}
-            onChange={(e) =>
-              setNewData({ ...newData, first_name: e.target.value })
-            }
-          />
-          <input
-            type="text"
-            placeholder="Lastname"
-            value={newData.last_name}
-            onChange={(e) =>
-              setNewData({ ...newData, last_name: e.target.value })
-            }
-          />
-          <input
-            type="text"
-            placeholder="Phone"
-            value={newData.phone}
-            onChange={(e) => setNewData({ ...newData, phone: e.target.value })}
-          />
-          <input
-            type="text"
-            placeholder="Role"
-            value={newData.role}
-            onChange={(e) => setNewData({ ...newData, role: e.target.value })}
-          />
-          <button type="submit">Save</button>
-          <button type="button" onClick={closeModal}>
-            Cancel
-          </button>
-        </form>
+      <div className="modal">
+        <div className="employee-edit-form-container">
+          <h2>Edit Employee</h2>
+          <hr />
+          <form action="" onSubmit={updateEmployee}>
+            <label htmlFor="username">Username</label>
+            <input
+              type="text"
+              placeholder="Username"
+              value={employee.username}
+              onChange={(e) =>
+                setNewData({ ...newData, username: e.target.value })
+              }
+              id="username"
+            />
+            <label htmlFor="fname">First Name</label>
+            <input
+              type="text"
+              placeholder="Firstname"
+              value={newData.first_name}
+              onChange={(e) =>
+                setNewData({ ...newData, first_name: e.target.value })
+              }
+              id="fname"
+            />
+            <label htmlFor="lname">Last Name</label>
+            <input
+              type="text"
+              placeholder="Lastname"
+              value={newData.last_name}
+              onChange={(e) =>
+                setNewData({ ...newData, last_name: e.target.value })
+              }
+              id="lname"
+            />
+            <label htmlFor="phone">Phonenumber</label>
+            <input
+              type="text"
+              placeholder="Phone"
+              value={newData.phone}
+              onChange={(e) =>
+                setNewData({ ...newData, phone: e.target.value })
+              }
+              id="phone"
+            />
+            <label htmlFor="role">Role</label>
+            <input
+              type="text"
+              placeholder="Role"
+              value={newData.role}
+              onChange={(e) => setNewData({ ...newData, role: e.target.value })}
+              id="role"
+            />
+            <button type="submit">Save</button>
+            <button type="button" onClick={closeModal}>
+              Cancel
+            </button>
+          </form>
+        </div>
       </div>
     </>
   );

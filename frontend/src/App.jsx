@@ -9,6 +9,9 @@ import CashierDashboard from "./pages/CashierDashboard";
 import CashierSales from "./pages/CashierSales";
 import Home from "./pages/Home";
 import Employees from "./pages/Employees";
+import SalesAdminPage from "./pages/SalesAdminPage";
+import AdminProfile from "./pages/AdminProfile";
+import AdminReports from "./pages/AdminReports";
 import { Layout } from "./Layout";
 import { AuthProvider } from "./context/AuthContext";
 function App() {
@@ -24,6 +27,14 @@ function App() {
                 element={
                   <PrivateRoute requiredRole="admin">
                     <AdminHome />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/sales"
+                element={
+                  <PrivateRoute requiredRole="admin">
+                    <SalesAdminPage />
                   </PrivateRoute>
                 }
               />
@@ -48,6 +59,23 @@ function App() {
                 element={
                   <PrivateRoute requiredRole="admin">
                     <Employees />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/admin-reports"
+                element={
+                  <PrivateRoute requiredRole="admin">
+                    <AdminReports />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/admin-profile"
+                element={
+                  <PrivateRoute requiredRole="admin">
+                    <AdminProfile />
                   </PrivateRoute>
                 }
               />
