@@ -39,9 +39,9 @@ function Navbar() {
               <Link to="/admin-reports" className="navlink">
                 Reports <img src={reports} alt="" className="navlink-icon" />
               </Link>
-              <Link to="/admin-profile" className="navlink">
+              {/* <Link to="/admin-profile" className="navlink">
                 Profile <img src={profile} alt="" className="navlink-icon" />
-              </Link>
+              </Link> */}
             </>
           )}
           {user.role === "cashier" && (
@@ -51,6 +51,10 @@ function Navbar() {
               </Link>
               <Link to="/cashier-sales" className="navlink">
                 Sales <img src={reg} alt="" className="navlink-icon" />
+              </Link>
+
+              <Link to="/all-products" className="navlink">
+                Products <img src={products} alt="" className="navlink-icon" />
               </Link>
             </>
           )}

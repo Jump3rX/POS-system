@@ -111,7 +111,9 @@ function AddProductForm({ handleAddNewProduct }) {
           />
         </div>
 
-        <button type="submit">Save Product</button>
+        <button type="submit" className="save-btn">
+          Save Product
+        </button>
       </form>
     </div>
   );

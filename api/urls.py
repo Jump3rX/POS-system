@@ -15,6 +15,16 @@ urlpatterns = [
     path('api/deactivate-user/<int:id>',views.deactivate_user, name='delete_user'),
     path('api/employees',views.employees, name='employees'),
     path('api/edit-employee/<int:id>',views.edit_employee, name='edit-employee'),
+    path('api/add-sale',views.add_sale,name='add-sale'),
+    path('api/get-sales',views.all_sales),
+    path('api/dashboard-data',views.dashboard_data),
+    path('api/reports-dashboard',views.reports_dashboard),
+    path("api/inventory-report", views.inventory_report, name="inventory-report"),
+    path("api/sales-report", views.sales_report, name="sales-report"),
+
+    path("api/chart-data", views.chart_data, name="sales-report"),
+
+    
 
     path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

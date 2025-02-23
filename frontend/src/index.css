@@ -9,6 +9,124 @@ body {
   padding: 0;
   background: #d0cdcd;
 }
+/*===============Common Elements=================*/
+.complete-btn {
+  background-color: green;
+  border: 1px;
+  padding: 8px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+.save-btn {
+  background-color: green;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 10px;
+  border: 1px;
+}
+.cancel-btn {
+  background-color: red;
+  color: white;
+  padding: 10px;
+  font-weight: bold;
+  border: 1px;
+  cursor: pointer;
+}
+.total-el {
+  font-size: x-large;
+  font-weight: bold;
+}
+.cash-btn {
+  color: white;
+  background: green;
+  border: 1px;
+  padding: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 30%;
+}
+.mpesa-btn {
+  color: white;
+  background-color: rgb(0, 255, 0);
+  font-weight: 700;
+  border: 1px;
+  cursor: pointer;
+  padding: 10px;
+  width: 30%;
+}
+.card-btn {
+  color: white;
+  background-color: rgb(192, 65, 65);
+  font-weight: 700;
+  border: 1px;
+  cursor: pointer;
+  padding: 10px;
+  width: 30%;
+}
+.hold-btn {
+  color: white;
+  font-weight: 700;
+  border: 1px;
+  background-color: #5d95d1;
+  padding: 10px;
+  width: 30%;
+  cursor: pointer;
+}
+.delete-btn {
+  background-color: red;
+  border: 1px;
+  width: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+.edit-btn {
+  background-color: rgb(207, 207, 7);
+  border: 1px;
+  width: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 5px;
+}
+.view-btn {
+  background-color: rgb(95, 95, 250);
+  border: 1px;
+  width: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 5px;
+}
+.deactivate-btn {
+  background-color: red;
+  border: 1px;
+  width: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.view-btn-img {
+  width: 100%;
+}
+.delete-btn-img {
+  width: 100%;
+}
+.edit-btn-img {
+  width: 100%;
+}
+.deactivate-btn-img {
+  width: 100%;
+}
+/*==============================================*/
+
 /*===============Nav bar style=================*/
 .navbar {
   display: flex;
@@ -125,6 +243,8 @@ thead {
 .modal-content form label {
   margin-bottom: 0px;
 }
+.action-btns {
+}
 /*============================================*/
 
 /*============Employees page styling===========*/
@@ -177,6 +297,9 @@ thead {
   flex-direction: column;
   gap: 10px;
 }
+.create-user-form-input {
+  padding: 5px;
+}
 /*============================================*/
 
 /*===============Login page styling===========*/
@@ -219,8 +342,11 @@ thead {
   border: 2px;
 }
 .login-btn {
-  padding: 5px;
+  padding: 8px;
   border-radius: 12px;
+  background-color: rgb(89, 197, 89);
+  color: white;
+  font-weight: 700;
   border: 1px;
   transition: all 0.2s;
 }
@@ -235,7 +361,7 @@ thead {
   display: flex;
   flex-direction: row;
   justify-content: space-evenly;
-  align-items: center;
+  align-items: start;
 }
 .sales-list-container {
   background-color: #ebebeb;
@@ -253,6 +379,14 @@ thead {
 .search-product-input {
   width: 65%;
   padding: 8px;
+}
+.payment-option-btns,
+.sale-option-btns {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: 10px;
 }
 /*============================================*/
 
@@ -354,11 +488,15 @@ thead {
   width: auto;
 }
 .sales-info-container {
-  width: fit-content;
+  width: 800px;
+  height: fit-content;
   background-color: #ebebeb;
   padding: 20px;
   border-radius: 13px;
   margin-top: 20px;
+}
+.statistics-chart {
+  width: 100%;
 }
 .right-section-container {
   display: flex;
@@ -428,5 +566,79 @@ thead {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+}
+/*============================================*/
+
+/*============cashier products list page =========================*/
+.cashier-products-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+}
+.table-container {
+  background-color: #ebebeb;
+  padding: 20px;
+  border-radius: 13px;
+}
+/*============================================*/
+
+/*=============Cash Sale Modal page============*/
+.tendered-input,
+.change-input {
+  padding: 10px;
+  font-size: large;
+  font-weight: bold;
+}
+/*============================================*/
+/*=======Admin Reports page Styling===========*/
+.admin-reports-page-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+  margin-top: 10px;
+}
+.report-cards {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+}
+.report-card {
+  background-color: #ebebeb;
+  padding: 15px;
+  border-radius: 13px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 15%;
+}
+.report-card h2 {
+  margin-bottom: 0;
+}
+.chart-downloads-section {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 40px;
+  align-items: start;
+}
+.revenue-chart {
+  background-color: #ebebeb;
+  padding: 15px;
+  border-radius: 13px;
+}
+.downloads-section {
+  background-color: #ebebeb;
+  padding: 15px;
+  border-radius: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.downloads-section h2 {
+  margin-bottom: 0px;
 }
 /*============================================*/

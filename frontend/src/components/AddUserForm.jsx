@@ -65,18 +65,21 @@ function AddUserForm({ handleAddNewUser }) {
           placeholder="Username"
           value={user.username}
           onChange={(e) => setUser({ ...user, username: e.target.value })}
+          className="create-user-form-input"
         />
         <input
           type="text"
           placeholder="First Name"
           value={user.first_name}
           onChange={(e) => setUser({ ...user, first_name: e.target.value })}
+          className="create-user-form-input"
         />
         <input
           type="text"
           placeholder="Last Name"
           value={user.last_name}
           onChange={(e) => setUser({ ...user, last_name: e.target.value })}
+          className="create-user-form-input"
         />
         <input
           type="number"
@@ -84,12 +87,14 @@ function AddUserForm({ handleAddNewUser }) {
           maxLength={13}
           value={user.phone}
           onChange={(e) => setUser({ ...user, phone: e.target.value })}
+          className="create-user-form-input"
         />
         <input
           type="role"
           placeholder="Role"
           value={user.role}
           onChange={(e) => setUser({ ...user, role: e.target.value })}
+          className="create-user-form-input"
         />
         <input
           type="password"
@@ -98,8 +103,11 @@ function AddUserForm({ handleAddNewUser }) {
           placeholder="password"
           value={user.password}
           onChange={(e) => setUser({ ...user, password: e.target.value })}
+          className="create-user-form-input"
         />
-        <button type="submit">Create</button>
+        <button type="submit" className="save-btn">
+          Create
+        </button>
       </form>
     </div>
   );
