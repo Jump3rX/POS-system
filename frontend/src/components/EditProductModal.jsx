@@ -99,8 +99,10 @@ function EditProductModal({ product, handleSave, closeModal }) {
             }
             id="quantity"
           />
-          <button type="submit">Save</button>
-          <button type="button" onClick={closeModal}>
+          <button type="submit" className="save-btn">
+            Save
+          </button>
+          <button type="button" className="cancel-btn" onClick={closeModal}>
             Cancel
           </button>
         </form>

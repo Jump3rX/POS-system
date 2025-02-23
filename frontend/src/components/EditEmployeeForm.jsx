@@ -1,5 +1,6 @@
 import React from "react";
 import { useState, useContext } from "react";
+
 import AuthContext from "../context/AuthContext";
 
 function EditEmployeeForm({ employee, handleSaveEmployee, closeModal }) {
@@ -88,8 +89,10 @@ function EditEmployeeForm({ employee, handleSaveEmployee, closeModal }) {
               onChange={(e) => setNewData({ ...newData, role: e.target.value })}
               id="role"
             />
-            <button type="submit">Save</button>
-            <button type="button" onClick={closeModal}>
+            <button type="submit" className="save-btn">
+              Save
+            </button>
+            <button type="button" className="cancel-btn" onClick={closeModal}>
               Cancel
             </button>
           </form>

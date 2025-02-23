@@ -7,11 +7,11 @@ import Customers from "./pages/Customers";
 import ProductsPage from "./pages/ProductsPage";
 import CashierDashboard from "./pages/CashierDashboard";
 import CashierSales from "./pages/CashierSales";
-import Home from "./pages/Home";
 import Employees from "./pages/Employees";
 import SalesAdminPage from "./pages/SalesAdminPage";
 import AdminProfile from "./pages/AdminProfile";
 import AdminReports from "./pages/AdminReports";
+import CashierProductsPage from "./pages/CashierProductsPage";
 import { Layout } from "./Layout";
 import { AuthProvider } from "./context/AuthContext";
 function App() {
@@ -92,6 +92,15 @@ function App() {
                 element={
                   <PrivateRoute requiredRole="cashier">
                     <CashierSales />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/all-products"
+                element={
+                  <PrivateRoute requiredRole="cashier">
+                    <CashierProductsPage />
                   </PrivateRoute>
                 }
               />

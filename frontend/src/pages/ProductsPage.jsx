@@ -67,7 +67,7 @@ function ProductsPage() {
       )
     );
     setIsEditModalOpen(false);
-    console.log(products);
+    alert("Product updated successfully!");
   }
   return (
     <div className="products-page-container">

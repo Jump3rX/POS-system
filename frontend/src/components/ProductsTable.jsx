@@ -1,5 +1,6 @@
 import React from "react";
-
+import delt from "../assets/delete.png";
+import edt from "../assets/edit.png";
 function ProductsTable({ products = [], handleDelete, handleEdit }) {
   return (
     <>
@@ -27,13 +28,13 @@ function ProductsTable({ products = [], handleDelete, handleEdit }) {
                   className="edit-btn"
                   onClick={() => handleEdit(product)}
                 >
-                  Edit
+                  <img src={edt} alt="" className="edit-btn-img" />
                 </button>
                 <button
                   className="delete-btn"
                   onClick={() => handleDelete(product.id)}
                 >
-                  Delete
+                  <img src={delt} alt="" className="delete-btn-img" />
                 </button>
               </td>
             </tr>

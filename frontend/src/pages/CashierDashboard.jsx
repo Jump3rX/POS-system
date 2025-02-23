@@ -57,7 +57,7 @@ function CashierDashboard() {
                     <td>John Doe</td>
                     <td>3,200</td>
                     <td>Mpesa</td>
-                    <td class="completed">Completed</td>
+                    <td className="completed">Completed</td>
                   </tr>
                   <tr>
                     <td>#1002</td>
@@ -65,7 +65,7 @@ function CashierDashboard() {
                     <td>Jane Mwangi</td>
                     <td>1,500</td>
                     <td>Cash</td>
-                    <td class="pending">Pending</td>
+                    <td className="pending">Pending</td>
                   </tr>
                   <tr>
                     <td>#1003</td>
@@ -73,7 +73,7 @@ function CashierDashboard() {
                     <td>David Kimani</td>
                     <td>4,750</td>
                     <td>Card</td>
-                    <td class="completed">Completed</td>
+                    <td className="completed">Completed</td>
                   </tr>
                 </tbody>
               </table>
