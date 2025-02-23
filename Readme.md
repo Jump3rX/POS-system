@@ -49,7 +49,7 @@ cd POS-system
 ### **3. Backend Setup:**
 
 ```bash
-cd backend
+cd POS-system
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
@@ -65,4 +65,4 @@ npm start
 
 ### **5. Database Configuration:**
 
-- Update database credentials in the backend's `settings.py` file.
+- No database setup is required
