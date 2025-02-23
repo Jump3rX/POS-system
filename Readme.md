@@ -43,7 +43,6 @@ The GetItRight POS System is a robust and user-friendly Point of Sale (POS) solu
 
 ```bash
 git clone https://github.com/Jump3rX/POS-system.git
-cd POS-system
 ```
 
 ### **3. Backend Setup:**
