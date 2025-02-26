@@ -23,7 +23,7 @@ The GetItRight POS System is a robust and user-friendly Point of Sale (POS) solu
 
 ### **Database:**
 
-- MySQL
+- SQLite
 
 ### **Other Tools:**
 
@@ -37,7 +37,7 @@ The GetItRight POS System is a robust and user-friendly Point of Sale (POS) solu
 
 - Python 3.8 or higher
 - Node.js 14 or higher
-- MySQL Server (XAMPP)
+- SQLite
 
 ### **2. Clone the Repository:**
 
