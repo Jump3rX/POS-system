@@ -82,6 +82,11 @@ body {
   justify-content: center;
   align-items: center;
   cursor: pointer;
+  border-radius: 5px;
+  transition: all 0.2s;
+}
+.delete-btn:hover {
+  background-color: rgb(221, 0, 0);
 }
 .edit-btn {
   background-color: rgb(207, 207, 7);
@@ -92,6 +97,7 @@ body {
   align-items: center;
   cursor: pointer;
   margin-bottom: 5px;
+  border-radius: 5px;
 }
 .view-btn {
   background-color: rgb(95, 95, 250);
@@ -105,6 +111,7 @@ body {
 }
 .deactivate-btn {
   background-color: red;
+  border-radius: 10px;
   border: 1px;
   width: 35px;
   display: flex;
@@ -243,8 +250,7 @@ thead {
 .modal-content form label {
   margin-bottom: 0px;
 }
-.action-btns {
-}
+
 /*============================================*/
 
 /*============Employees page styling===========*/
@@ -375,10 +381,28 @@ thead {
 }
 .search-product-container {
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
 }
+
 .search-product-input {
   width: 65%;
   padding: 8px;
+}
+.live-search-list {
+  background-color: white;
+  border: 1px solid #ddd;
+  max-height: 200px;
+  overflow-y: auto;
+  list-style-type: none;
+  padding: 8px;
+  margin-bottom: 5px;
+}
+.live-search-list-option {
+  padding: 8px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
 }
 .payment-option-btns,
 .sale-option-btns {
@@ -387,6 +411,11 @@ thead {
   justify-content: space-evenly;
   align-items: center;
   gap: 10px;
+}
+.quantity-el {
+  margin-left: 5px;
+  margin-right: 5px;
+  font-weight: 500;
 }
 /*============================================*/
 

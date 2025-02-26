@@ -53,9 +53,9 @@ function Navbar() {
                 Sales <img src={reg} alt="" className="navlink-icon" />
               </Link>
 
-              <Link to="/all-products" className="navlink">
+              {/* <Link to="/all-products" className="navlink">
                 Products <img src={products} alt="" className="navlink-icon" />
-              </Link>
+              </Link> */}
             </>
           )}
 
