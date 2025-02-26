@@ -1,8 +1,10 @@
 import React from "react";
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import CashSaleModal from "../components/CashSaleModal";
 import AuthContext from "../context/AuthContext";
-import { useAsyncError } from "react-router-dom";
+import del from "../assets/delete.png";
+import CashierProductsPage from "./CashierProductsPage";
+
 function CashierSales() {
   const [cart, setCart] = useState(() => {
     const savedCart = localStorage.getItem("pos_cart");
@@ -10,8 +12,12 @@ function CashierSales() {
   });
   const [products, setProducts] = useState([]);
   const [searchVal, setSearchVal] = useState("");
-  const [total, setTotal] = useState();
+  const [total, setTotal] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [openProductModal, setOpenProductModal] = useState(false);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const searchInputRef = useRef(null);
 
   let { authTokens, logoutUser } = useContext(AuthContext);
 
@@ -46,19 +52,71 @@ function CashierSales() {
     localStorage.setItem("pos_cart", JSON.stringify(cart));
   }, [cart]);
 
-  function handleSetSearchVal(value) {
-    setSearchVal(value);
-    if (value.length === 6) {
-      let pCode = parseInt(value, 10);
-      let found = products.find((p) => p.product_code === pCode);
-      if (found) {
-        handleAddToCart(found);
-      } else {
-        alert("Product not found!");
-        setSearchVal("");
-      }
+  useEffect(() => {
+    if (searchVal.trim() === "") {
+      setFilteredProducts([]);
+      setHighlightedIndex(-1);
+    } else {
+      const filtered = products.filter(
+        (product) =>
+          product.product_name
+            .toLowerCase()
+            .includes(searchVal.toLowerCase()) ||
+          String(product.product_code).includes(searchVal)
+      );
+      setFilteredProducts(filtered);
+      setHighlightedIndex(filtered.length > 0 ? 0 : -1);
+    }
+  }, [searchVal]);
+
+  function handleSearchChange(e) {
+    setSearchVal(e.target.value);
+  }
+
+  function handleSelectProduct(product) {
+    handleAddToCart(product);
+    setSearchVal("");
+    setFilteredProducts([]);
+    setHighlightedIndex(-1);
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    } else {
+      console.warn("Search input ref is not available");
     }
   }
+
+  function handleKeyDown(e) {
+    if (filteredProducts.length === 0) return;
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedIndex((prev) =>
+          prev < filteredProducts.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (
+          highlightedIndex >= 0 &&
+          highlightedIndex < filteredProducts.length
+        ) {
+          handleSelectProduct(filteredProducts[highlightedIndex]);
+        }
+        break;
+      case "Escape":
+        e.preventDefault();
+        setFilteredProducts([]);
+        setHighlightedIndex(-1);
+        break;
+      default:
+        break;
+    }
+  }
+
   function handleAddToCart(product) {
     const inCart = cart.find(
       (item) => item.product_code === product.product_code
@@ -85,32 +143,44 @@ function CashierSales() {
         },
       ]);
     }
-    // setCart((c) => (c.length == 0 ? [product] : [...c, product]));
-    setSearchVal("");
   }
 
-  function handleChangeQuantity(productCode, newQuantity) {
-    // let tempCart = [...cart];
-    // let quantity = newQuantity;
-    // if (isNaN(quantity) || quantity < 1) {
-    //   quantity = 1;
-    // }
-    // tempCart = tempCart.map((item) => {
-    //   item.product_code === productCode
-    //     ? {
-    //         ...item,
-    //         quantity,
-    //         subtotal: (item.product_price * quantity).toFixed(2),
-    //       }
-    //     : item;
-    // });
-    // setCart(tempCart);
+  function handleChangeQuantity(productCode, change) {
+    setCart((prevCart) => {
+      const currCart = Array.isArray(prevCart) ? prevCart : [];
+
+      return currCart.map((item) => {
+        if (item.product_code === productCode) {
+          const newQuantity = Math.max(1, item.quantity + change); // Ensures minimum of 1
+          return {
+            ...item,
+            quantity: newQuantity,
+            subtotal: (item.product_price * newQuantity).toFixed(2),
+          };
+        }
+        return item;
+      });
+    });
   }
+
+  function handleDeleteCartProduct(id) {
+    if (
+      window.confirm(`Are you sure you want to remove this product from cart?`)
+    ) {
+      setCart((prevCart) => {
+        const newCart = (Array.isArray(prevCart) ? prevCart : []).filter(
+          (item) => item.id !== id
+        );
+        return newCart;
+      });
+    }
+  }
+
   function cancelSale() {
     if (confirm("Are you sure you want to cancel this sale?")) {
       setCart([]);
       setSearchVal("");
-      setTotal();
+      setTotal(0);
       clearCart();
     }
   }
@@ -121,7 +191,7 @@ function CashierSales() {
   function closeSale() {
     setCart([]);
     setSearchVal("");
-    setTotal();
+    setTotal(0);
     clearCart();
   }
 
@@ -162,22 +232,58 @@ function CashierSales() {
   function clearCart() {
     localStorage.removeItem("pos_cart");
   }
+  function handleOpenProductModal() {
+    setOpenProductModal(true);
+  }
+  function handleCloseProductModal() {
+    setOpenProductModal(false);
+  }
   return (
     <>
       <div className="sales-page-container">
         <div className="sales-list-container">
-          <h1>Sales List</h1>
-          <form>
-            <div className="search-product-container">
-              <input
-                type="number"
-                className="search-product-input"
-                placeholder="Enter product code or name"
-                value={searchVal}
-                onChange={(e) => handleSetSearchVal(e.target.value)}
-              />
-            </div>
-          </form>
+          <h1>Sales Register</h1>
+
+          <div className="search-product-container">
+            <input
+              type="text"
+              ref={searchInputRef}
+              className="search-product-input"
+              placeholder="Enter product code or name"
+              value={searchVal}
+              onChange={(e) => handleSearchChange(e)}
+              onKeyDown={handleKeyDown}
+            />
+            <button onClick={() => handleOpenProductModal()}>
+              View Products
+            </button>
+          </div>
+
+          {filteredProducts.length > 0 && (
+            <ul className="live-search-list">
+              {filteredProducts.map((product, index) => (
+                <li
+                  className="live-search-list-option"
+                  key={product.id}
+                  onClick={() => handleSelectProduct(product)}
+                  onMouseEnter={() => setHighlightedIndex(index)}
+                  onMouseOver={(e) =>
+                    (e.target.style.backgroundColor = "#f0f0f0")
+                  }
+                  onMouseOut={(e) => (e.target.style.backgroundColor = "white")}
+                  style={{
+                    backgroundColor:
+                      highlightedIndex === index ? "#e0e0e0" : "white",
+                  }}
+                >
+                  Code: {product.product_code} -- Name: {product.product_name}
+                </li>
+              ))}
+            </ul>
+          )}
+          {openProductModal && (
+            <CashierProductsPage closeProductModal={handleCloseProductModal} />
+          )}
 
           <div className="sales-list-table-container">
             <table>
@@ -188,34 +294,41 @@ function CashierSales() {
                   <th>Price</th>
                   <th>Quantity</th>
                   <th>SubTotal</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {cart.length > 0 ? (
+                {Array.isArray(cart) && cart.length > 0 ? (
                   cart.map((item) => (
                     <tr key={item.id}>
                       <td>{item.product_code}</td>
                       <td>{item.product_name}</td>
                       <td>{item.product_price}</td>
                       <td>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            handleChangeQuantity(
-                              item.product_code,
-                              parseInt(e.target.value, 10)
-                            )
+                        <button
+                          onClick={() =>
+                            handleChangeQuantity(item.product_code, -1)
                           }
-                        />
+                          disabled={item.quantity <= 1}
+                        >
+                          -
+                        </button>
+                        <span className="quantity-el">{item.quantity}</span>
                       </td>
-                      <td>Ksh {item.product_price * item.quantity}</td>
+                      <td>Ksh {item.subtotal}</td>
+                      <td>
+                        <button
+                          className="delete-btn"
+                          onClick={() => handleDeleteCartProduct(item.id)}
+                        >
+                          <img src={del} className="delete-btn-img" alt="" />
+                        </button>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: "center" }}>
+                    <td colSpan={6} style={{ textAlign: "center" }}>
                       Add items to cart
                     </td>
                   </tr>

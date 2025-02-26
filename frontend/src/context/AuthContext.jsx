@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
       if (decodeToken.role === "admin") {
         navigate("/admin");
       } else if (decodeToken.role === "cashier") {
-        navigate("/cashier-dashboard");
+        navigate("/cashier-sales");
       } else {
         navigate("/");
       }

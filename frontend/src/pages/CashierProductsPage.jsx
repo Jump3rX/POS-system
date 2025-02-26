@@ -1,7 +1,7 @@
 import { useState, useContext, useEffect } from "react";
 import AuthContext from "../context/AuthContext";
 
-function CashierProductsPage() {
+function CashierProductsPage({ closeProductModal }) {
   let { authTokens, logoutUser } = useContext(AuthContext);
   const [products, setProducts] = useState([]);
   useEffect(() => {
@@ -25,31 +25,36 @@ function CashierProductsPage() {
   }, []);
   return (
     <>
-      <div className="cashier-products-container">
-        <div className="table-container">
-          <h2>Current Products List</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Code</th>
-                <th>Name</th>
-                <th>Category</th>
-                <th>Price</th>
-                <th>Stock</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.product_code}</td>
-                  <td>{p.product_name}</td>
-                  <td>{p.product_category}</td>
-                  <td>{Number(p.product_price).toLocaleString() || "0"}</td>
-                  <td>{p.stock_quantity}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="modal">
+        <div className="modal-content">
+          <div className="cashier-products-container">
+            <div className="table-container">
+              <h2>Current Products List</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.product_code}</td>
+                      <td>{p.product_name}</td>
+                      <td>{p.product_category}</td>
+                      <td>{Number(p.product_price).toLocaleString() || "0"}</td>
+                      <td>{p.stock_quantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <button onClick={() => closeProductModal()}>Close</button>
         </div>
       </div>
     </>
