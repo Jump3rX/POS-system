@@ -65,7 +65,7 @@ function Home() {
                     <div className="info1">
                       <span className="small-gray">Monthly Sales</span>
                       <p className="bold-black">
-                        Ksh {data?.monthly_sales.toLocaleString()}
+                        Ksh {data?.monthly_sales?.toLocaleString() || 0}
                       </p>
                     </div>
                     <div className="info2">
@@ -77,7 +77,7 @@ function Home() {
                     <div className="info1">
                       <span className="small-gray">Weekly Sales</span>
                       <p className="bold-black">
-                        Ksh {data?.weekly_sales.toLocaleString()}
+                        Ksh {data?.weekly_sales?.toLocaleString() || 0}
                       </p>
                     </div>
                     <div className="info2">

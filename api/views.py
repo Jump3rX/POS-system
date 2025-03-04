@@ -1,6 +1,7 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse,FileResponse
 from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
 from django.utils.timezone import timedelta,now
 from django.utils import timezone
 from django.db.models import Sum
@@ -19,10 +20,12 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .permissions import isAdminRole
 
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4,letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle,SimpleDocTemplate
+from reportlab.lib.units import inch
+import io
 # Create your views here.
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -39,6 +42,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+
+
 
 @api_view(['GET'])
 def index(request):
@@ -214,7 +219,7 @@ def add_sale(request):
     if sale_serailizer.is_valid():
         sale_instance = sale_serailizer.save()
         sale_items = request.data.get('items',[])
-        sale_items_objects = []
+        sales_item_list = []
         for item in sale_items:
             sale_item_data = {
                 'sale':sale_instance.id,
@@ -225,11 +230,35 @@ def add_sale(request):
             item_serializer = addSaleItemsSerializer(data=sale_item_data)
             if item_serializer.is_valid():
                 item_serializer.save()
+                
             else:
                 return Response({'message':f'{item_serializer.errors}'},status=status.HTTP_400_BAD_REQUEST)
-        return Response({'messsage':'SALE ADDED!!'},status=status.HTTP_201_CREATED)
+            product = products.objects.get(id = item.get('product'))
+            product.stock_quantity -= item.get('quantity')
+            product.save()
+            sales_item_list.append({
+                'product_code': product.product_code,
+                'product_name': product.product_name,
+                'quantity': item.get('quantity'),
+                'price': float(item.get('price'))
+            })
+        response_data = {
+            'seller':request.user.first_name,
+            'sale_id': sale_instance.id,
+            'sale_date': sale_instance.sale_date,
+            'total': float(sale_instance.total),
+            'payment_method': sale_instance.payment_method,
+            'amount_tendered': float(sale_instance.amount_tendered),
+            'change': float(sale_instance.change),
+            'items': sales_item_list
+        }
+        
+        return Response(response_data, status=status.HTTP_201_CREATED)
     else:
         return Response({'message':f'{sale_serailizer.errors}'},status=status.HTTP_400_BAD_REQUEST)
+    
+    
+    
 
 
 @api_view(['POST'])
@@ -395,4 +424,30 @@ def sales_report(request):
     doc.build(elements)
 
     return response
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_confirm(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+
+    if username!= "" and password!="":
+        is_authenticated = authenticate(request, username=username,password=password)
+        if is_authenticated is not None:
+            if is_authenticated.profile.role == 'admin':
+                return Response({'message':'authorized'},status=status.HTTP_200_OK)
+            else:
+                return Response({'message':'not authorized'},status=status.HTTP_403_FORBIDDEN)
+        else:
+            return Response({'message':'user not found'},status=status.HTTP_404_NOT_FOUND)
+    else:
+        return Response({'message':'missing credentials'},status=status.HTTP_400_BAD_REQUEST)
+    
+        
+        
+
+
+
+
+
 

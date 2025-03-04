@@ -89,13 +89,21 @@ function AddUserForm({ handleAddNewUser }) {
           onChange={(e) => setUser({ ...user, phone: e.target.value })}
           className="create-user-form-input"
         />
-        <input
-          type="role"
-          placeholder="Role"
-          value={user.role}
-          onChange={(e) => setUser({ ...user, role: e.target.value })}
+
+        <select
+          name="role"
+          id="employee-role"
           className="create-user-form-input"
-        />
+          onChange={(e) => setUser({ ...user, role: e.target.value })}
+          defaultValue="placeholder"
+          value={user.role}
+        >
+          <option value="" disabled>
+            Select employee role
+          </option>
+          <option value="cashier">Cashier</option>
+          <option value="admin">Admin</option>
+        </select>
         <input
           type="password"
           name=""

@@ -4,6 +4,9 @@ import CashSaleModal from "../components/CashSaleModal";
 import AuthContext from "../context/AuthContext";
 import del from "../assets/delete.png";
 import CashierProductsPage from "./CashierProductsPage";
+import HeldSalesModal from "../components/HeldSalesModal";
+import ReceiptModal from "../components/ReceiptModal";
+import AdminConfirmModal from "../components/AdminConfirmModal";
 
 function CashierSales() {
   const [cart, setCart] = useState(() => {
@@ -17,8 +20,17 @@ function CashierSales() {
   const [openProductModal, setOpenProductModal] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [heldSales, setHeldSales] = useState(() => {
+    const savedHeldSales = localStorage.getItem("held_sales");
+    return savedHeldSales ? JSON.parse(savedHeldSales) : [];
+  });
+  const [openHeldSalesModal, setOpenHeldSalesModal] = useState(false);
+  const [openAdminConfirm, setOpenAdminConfirm] = useState(false);
   const searchInputRef = useRef(null);
-
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
+  const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
+  const [action, setAction] = useState(null);
   let { authTokens, logoutUser } = useContext(AuthContext);
 
   useEffect(() => {
@@ -53,6 +65,10 @@ function CashierSales() {
   }, [cart]);
 
   useEffect(() => {
+    localStorage.setItem("held_sales", JSON.stringify(heldSales));
+  }, [heldSales]);
+
+  useEffect(() => {
     if (searchVal.trim() === "") {
       setFilteredProducts([]);
       setHighlightedIndex(-1);
@@ -68,6 +84,44 @@ function CashierSales() {
       setHighlightedIndex(filtered.length > 0 ? 0 : -1);
     }
   }, [searchVal]);
+
+  useEffect(() => {
+    if (isAdminAuthorized && action) {
+      if (action.type === "reduce") {
+        console.log(`Reduce ${action.productCode}, change${action.change}`);
+        setCart((prevCart) => {
+          const currCart = Array.isArray(prevCart) ? prevCart : [];
+          return currCart.map((item) => {
+            if (item.product_code === action.productCode) {
+              const newQuantity = Math.max(1, item.quantity + action.change); // Ensures minimum of 1
+              return {
+                ...item,
+                quantity: newQuantity,
+                subtotal: (item.product_price * newQuantity).toFixed(2),
+              };
+            }
+            return item;
+          });
+        });
+      } else if (action.type === "delete") {
+        console.log(`delete product ${action.id}`);
+        if (
+          window.confirm(
+            `Are you sure you want to remove this product from cart?`
+          )
+        ) {
+          setCart((prevCart) => {
+            const newCart = (Array.isArray(prevCart) ? prevCart : []).filter(
+              (item) => item.id !== action.id
+            );
+            return newCart;
+          });
+        }
+      }
+      setIsAdminAuthorized(false);
+      setAction(null);
+    }
+  }, [isAdminAuthorized]);
 
   function handleSearchChange(e) {
     setSearchVal(e.target.value);
@@ -145,35 +199,56 @@ function CashierSales() {
     }
   }
 
-  function handleChangeQuantity(productCode, change) {
-    setCart((prevCart) => {
-      const currCart = Array.isArray(prevCart) ? prevCart : [];
-
-      return currCart.map((item) => {
-        if (item.product_code === productCode) {
-          const newQuantity = Math.max(1, item.quantity + change); // Ensures minimum of 1
-          return {
-            ...item,
-            quantity: newQuantity,
-            subtotal: (item.product_price * newQuantity).toFixed(2),
-          };
-        }
-        return item;
-      });
-    });
+  function handleSetConfirm(value) {
+    if (value === true) {
+      setIsAdminAuthorized(true);
+    } else {
+      setIsAdminAuthorized(false);
+    }
   }
 
+  function handleChangeQuantity(productCode, change) {
+    setAction({ type: "reduce", productCode, change });
+    setOpenAdminConfirm(true);
+  }
   function handleDeleteCartProduct(id) {
-    if (
-      window.confirm(`Are you sure you want to remove this product from cart?`)
-    ) {
-      setCart((prevCart) => {
-        const newCart = (Array.isArray(prevCart) ? prevCart : []).filter(
-          (item) => item.id !== id
-        );
-        return newCart;
-      });
+    setAction({ type: "delete", id });
+    setOpenAdminConfirm(true);
+  }
+
+  function holdSale() {
+    if (cart.length === 0) {
+      alert("No items to hold");
+      return;
     }
+    const heldSale = {
+      id: Date.now(),
+      items: [...cart],
+      total: total,
+      timestamp: new Date().toISOString(),
+    };
+    setHeldSales((prevHeld) => {
+      const currHeldSale = Array.isArray(prevHeld) ? prevHeld : [];
+      return [...currHeldSale, heldSale];
+    });
+    alert("Sale has been put on hold!");
+    closeSale();
+  }
+
+  function getHeldSale(id) {
+    const heldSale = heldSales.find((sale) => sale.id === id);
+    if (heldSale) {
+      setCart(heldSale.items);
+      setTotal(heldSale.total);
+      setHeldSales((prevSales) => prevSales.filter((sale) => sale.id !== id));
+    }
+    setOpenHeldSalesModal(false);
+  }
+  function deleteHeldSale(id) {
+    if (window.confirm("Are you sure you want to delete this held sale?")) {
+      setHeldSales((prevSale) => prevSale.filter((sale) => sale.id !== id));
+    }
+    setOpenHeldSalesModal(false);
   }
 
   function cancelSale() {
@@ -184,17 +259,6 @@ function CashierSales() {
       clearCart();
     }
   }
-  function holdSale() {
-    console.log("HOLD!!!");
-  }
-
-  function closeSale() {
-    setCart([]);
-    setSearchVal("");
-    setTotal(0);
-    clearCart();
-  }
-
   function handleSubmit(tendered, change) {
     const saleData = {
       total: total,
@@ -207,6 +271,7 @@ function CashierSales() {
       amount_tendered: tendered,
       change_due: change,
     };
+
     fetch(`http://127.0.0.1:8000/api/add-sale`, {
       method: "POST",
       headers: {
@@ -215,8 +280,21 @@ function CashierSales() {
       },
       body: JSON.stringify(saleData),
     })
-      .then((res) => res.json())
-      .then((data) => console.log(data));
+      .then((res) => {
+        if (!res.ok) alert("Saving error");
+        return res.json();
+      })
+      .then((data) => {
+        console.log(data);
+        setReceiptData(data);
+        setShowReceiptModal(true);
+        // closeSale();
+        closeModal();
+      })
+      .catch((error) => {
+        console.error("Error submitting sale:", error);
+        alert("Failed to complete sale: " + error.message);
+      });
     clearCart();
     closeModal();
     closeSale();
@@ -228,6 +306,12 @@ function CashierSales() {
   function closeModal() {
     setIsModalOpen(false);
   }
+  function closeSale() {
+    setCart([]);
+    setSearchVal("");
+    setTotal(0);
+    clearCart();
+  }
 
   function clearCart() {
     localStorage.removeItem("pos_cart");
@@ -237,6 +321,25 @@ function CashierSales() {
   }
   function handleCloseProductModal() {
     setOpenProductModal(false);
+  }
+
+  function handleOpenHelSalesModal() {
+    setOpenHeldSalesModal(true);
+  }
+  function handleCloseHeldSalesModal() {
+    setOpenHeldSalesModal(false);
+  }
+
+  function closeReceiptModal() {
+    setShowReceiptModal(false);
+    setReceiptData(null);
+    closeSale();
+  }
+  function handleOpenAdminConfirm() {
+    setOpenAdminConfirm(true);
+  }
+  function handleCloseAdminConfirm() {
+    setOpenAdminConfirm(false);
   }
   return (
     <>
@@ -256,6 +359,9 @@ function CashierSales() {
             />
             <button onClick={() => handleOpenProductModal()}>
               View Products
+            </button>
+            <button onClick={() => handleOpenHelSalesModal()}>
+              Held Sales
             </button>
           </div>
 
@@ -284,9 +390,28 @@ function CashierSales() {
           {openProductModal && (
             <CashierProductsPage closeProductModal={handleCloseProductModal} />
           )}
-
+          {openHeldSalesModal && (
+            <HeldSalesModal
+              handleCloseHeldSalesModal={handleCloseHeldSalesModal}
+              heldSales={heldSales}
+              getHeldSale={getHeldSale}
+              deleteHeldSale={deleteHeldSale}
+            />
+          )}
+          {showReceiptModal && receiptData && (
+            <ReceiptModal
+              receipt={receiptData}
+              closeReceiptModal={closeReceiptModal}
+            />
+          )}
+          {openAdminConfirm && (
+            <AdminConfirmModal
+              handleCloseAdminConfirm={handleCloseAdminConfirm}
+              handleSetConfirm={handleSetConfirm}
+            />
+          )}
           <div className="sales-list-table-container">
-            <table>
+            <table className="register-sales-table">
               <thead>
                 <tr>
                   <th>Code</th>
