@@ -21,7 +21,6 @@ ChartJS.register(
   Legend
 );
 function SalesStatisticsChart({ chartData }) {
-  console.log(chartData);
   const saleData = {
     labels: chartData.map((s) => s.day),
     datasets: [

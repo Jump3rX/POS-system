@@ -92,19 +92,19 @@ function AdminReports() {
         <div className="admin-reports-page-container">
           <div className="report-cards">
             <div className="report-card">
-              <h2>Ksh {data.weekly_sales.toLocaleString()}</h2>
+              <h2>Ksh {data?.weekly_sales?.toLocaleString() || 0}</h2>
               <p>Weekly Sales</p>
             </div>
             <div className="report-card">
-              <h2>Ksh {data.monthly_sales.toLocaleString()}</h2>
+              <h2>Ksh {data?.monthly_sales?.toLocaleString() || 0}</h2>
               <p>Monthly Sales</p>
             </div>
             <div className="report-card">
-              <h2>{data.weekly_product_sales.toLocaleString()}</h2>
+              <h2>{data?.weekly_product_sales?.toLocaleString() || 0}</h2>
               <p>Weekly Product Sales</p>
             </div>
             <div className="report-card">
-              <h2>{data.monthly_product_sales.toLocaleString()}</h2>
+              <h2>{data?.monthly_product_sales?.toLocaleString() || 0}</h2>
               <p>Monthly Product Sales</p>
             </div>
             <div className="report-card">

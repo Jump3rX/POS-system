@@ -18,6 +18,7 @@ body {
   font-weight: bold;
   cursor: pointer;
 }
+.confirm-btn,
 .save-btn {
   background-color: green;
   color: white;
@@ -373,6 +374,10 @@ thead {
   background-color: #ebebeb;
   padding: 15px;
   border-radius: 13px;
+  width: 50%;
+}
+.register-sales-table {
+  width: 100%;
 }
 .sales-summary-container {
   background-color: #ebebeb;
@@ -416,6 +421,30 @@ thead {
   margin-left: 5px;
   margin-right: 5px;
   font-weight: 500;
+}
+.wait-heading {
+  text-align: center;
+  color: red;
+}
+.admin-confirm-modal-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.stop-icon-container {
+  width: 150px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+.stop-icon {
+  width: 100%;
+}
+.admin-password-confirm-input,
+.admin-username-confirm-input {
+  padding: 8px;
 }
 /*============================================*/
 
