@@ -17,8 +17,9 @@ class products(models.Model):
     product_code = models.IntegerField(unique=True)
     product_name = models.CharField(max_length=100)
     product_category = models.CharField(max_length=100)
-    product_price = models.DecimalField(max_digits=5, decimal_places=2)
+    product_price = models.DecimalField(max_digits=10, decimal_places=2)
     stock_quantity = models.IntegerField()
+    low_stock_level = models.IntegerField()
 
     class Meta:
         verbose_name_plural = "products"

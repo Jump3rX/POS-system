@@ -11,6 +11,7 @@ function EditProductModal({ product, handleSave, closeModal }) {
     product_category: product.product_category,
     product_price: product.product_price,
     stock_quantity: product.stock_quantity,
+    low_stock_level: product.low_stock_level,
   });
 
   function saveProduct(e) {
@@ -96,6 +97,16 @@ function EditProductModal({ product, handleSave, closeModal }) {
             value={newProduct.stock_quantity}
             onChange={(e) =>
               setNewProduct({ ...newProduct, stock_quantity: e.target.value })
+            }
+            id="quantity"
+          />
+          <input
+            type="text"
+            className="edit-product-form-input"
+            placeholder="Low Stock Alert Level"
+            value={newProduct.low_stock_level}
+            onChange={(e) =>
+              setNewProduct({ ...newProduct, low_stock_level: e.target.value })
             }
             id="quantity"
           />

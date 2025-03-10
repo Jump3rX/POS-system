@@ -4,6 +4,7 @@ import ProductsTable from "../components/ProductsTable";
 import ProductsSummaryCard from "../components/ProductsSummaryCard";
 import AddProductForm from "../components/AddProductForm";
 import EditProductModal from "../components/EditProductModal";
+import BulkUploadForm from "../components/BulkUploadForm";
 import AuthContext from "../context/AuthContext";
 
 function ProductsPage() {
@@ -12,7 +13,7 @@ function ProductsPage() {
   const [productToEdit, setProductToEdit] = useState(null);
   let { authTokens, logoutUser } = useContext(AuthContext);
 
-  useEffect(() => {
+  function fetchProducts() {
     fetch("http://127.0.0.1:8000/api/products", {
       method: "GET",
       headers: {
@@ -30,6 +31,10 @@ function ProductsPage() {
       .then((data) => {
         setProducts(data);
       });
+  }
+
+  useEffect(() => {
+    fetchProducts();
   }, []);
   let totalProducts = products.length;
 
@@ -93,6 +98,8 @@ function ProductsPage() {
           </div>
 
           <div className="add-product-form-container">
+            <BulkUploadForm getProducts={fetchProducts} />
+            <hr />
             <AddProductForm handleAddNewProduct={handleAddNewProduct} />
           </div>
         </div>

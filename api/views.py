@@ -7,6 +7,8 @@ from django.utils import timezone
 from django.db.models import Sum
 from django.db.models import Value
 from django.db.models.functions import Concat,TruncDate
+from django.db import models
+from decimal import Decimal, InvalidOperation
 
 from rest_framework.decorators import api_view,permission_classes
 from rest_framework.response import Response
@@ -26,6 +28,7 @@ from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle,SimpleDocTemplate
 from reportlab.lib.units import inch
 import io
+import pandas as pd
 # Create your views here.
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -81,8 +84,88 @@ def add_product(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated, isAdminRole])
+def bulk_upload(request):
+    if 'file' not in request.FILES:
+        print("No file provided in request")
+        return Response({'message': "File not found"}, status=status.HTTP_400_BAD_REQUEST)
 
+    file = request.FILES['file']
+    try:
+        # Read CSV, handle NaN by filling with empty string
+        df = pd.read_csv(file, dtype=str, na_values=['', 'NA', 'N/A'], keep_default_na=False)
+        df.columns = df.columns.str.strip()
+        required_columns = {"product_code", "name", "category", "price", "stock_quantity", "low_stock_level"}
+
+        if not required_columns.issubset(df.columns):
+            missing = required_columns - set(df.columns)
+            print(f"Missing required columns: {missing}")
+            return Response({"error": f"CSV file is missing required columns: {missing}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        products_added = 0
+        products_updated = 0
+        skipped_rows = []
+
+        for index, row in df.iterrows():
+            product_code = str(row['product_code']).strip()
+            if not product_code or not product_code.isdigit():
+                print(f"Row {index}: Invalid product_code '{product_code}' - skipping")
+                skipped_rows.append(index)
+                continue
+
+            try:
+                # Handle price conversion
+                price_str = str(row['price']).replace(',', '').strip()
+                product_price = Decimal(price_str) if price_str else Decimal('0.00')
+
+                # Handle stock quantity
+                stock_str = str(row['stock_quantity']).strip()
+                stock_quantity = int(stock_str) if stock_str.isdigit() else 0
+
+                # Handle low stock level
+                low_stock_str = str(row['low_stock_level']).strip()
+                low_stock_level = int(low_stock_str) if low_stock_str.isdigit() else 0
+
+            except (InvalidOperation, ValueError) as e:
+                print(f"Row {index}: Invalid data format for product_code '{product_code}' - {str(e)}")
+                skipped_rows.append(index)
+                continue
+
+            try:
+                product, created = products.objects.update_or_create(
+                    product_code=product_code,
+                    defaults={
+                        'product_name': str(row['name']).strip(),
+                        'product_category': str(row['category']).strip(),
+                        'product_price': product_price,
+                        'stock_quantity': stock_quantity,
+                        'low_stock_level': low_stock_level,
+                    }
+                )
+                if created:
+                    products_added += 1
+                    print(f"Added new product: {product_code}")
+                else:
+                    products_updated += 1
+                    print(f"Updated product: {product_code}")
+            except Exception as e:
+                print(f"Row {index}: Failed to save product_code '{product_code}' - {str(e)}")
+                skipped_rows.append(index)
+                continue
+
+        response_data = {
+            "message": f"Successfully added {products_added} new products, updated {products_updated} products.",
+            "skipped_rows": skipped_rows if skipped_rows else "None",
+        }
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        print(f"Failed to process CSV file: {str(e)}")
+        return Response({"error": f"Failed to process CSV file: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated,isAdminRole])
 def edit_product(request,id):
     product = products.objects.get(id=id)
     product_data = ProductsSerializer(instance=product,data=request.data)
@@ -443,8 +526,24 @@ def admin_confirm(request):
     else:
         return Response({'message':'missing credentials'},status=status.HTTP_400_BAD_REQUEST)
     
-        
-        
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def stock_data(request):
+    total = products.objects.all().count()
+    low_stock = products.objects.filter(stock_quantity__lte=models.F('low_stock_level')).count()
+    low_stock_products = products.objects.filter(stock_quantity__lte=models.F('low_stock_level'))
+    pending_restock = products.objects.filter(stock_quantity__lte=models.F('low_stock_level')).count()
+    serialized_products = ProductsSerializer(low_stock_products,many=True).data
+
+    data = {
+        'total_stock':total,
+        'low_stock':low_stock,
+        'low_stock_products':serialized_products,
+        'pending_restock':pending_restock,
+    }
+
+    return Response(data,status=status.HTTP_200_OK)
 
 
 

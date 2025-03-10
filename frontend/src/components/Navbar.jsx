@@ -32,6 +32,9 @@ function Navbar() {
               <Link to="/products" className="navlink">
                 Products <img src={products} alt="" className="navlink-icon" />
               </Link>
+              <Link to="/restock" className="navlink">
+                Restock <img src={products} alt="" className="navlink-icon" />
+              </Link>
               <Link to="/employees" className="navlink">
                 Employees{" "}
                 <img src={employees} alt="" className="navlink-icon" />
