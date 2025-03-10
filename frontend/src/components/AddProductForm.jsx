@@ -9,6 +9,7 @@ function AddProductForm({ handleAddNewProduct }) {
     product_category: "",
     product_price: "",
     stock_quantity: "",
+    low_stock_level: "",
   });
 
   function handleSubmit(e) {
@@ -18,7 +19,8 @@ function AddProductForm({ handleAddNewProduct }) {
       product.product_name &&
       product.product_category &&
       product.product_price &&
-      product.stock_quantity
+      product.stock_quantity &&
+      product.low_stock_level
     ) {
       fetch("http://127.0.0.1:8000/api/add-product", {
         method: "POST",
@@ -45,13 +47,13 @@ function AddProductForm({ handleAddNewProduct }) {
             product_category: "",
             product_price: "",
             stock_quantity: "",
+            low_stock_level: "",
           });
           alert("Product added successfullt!");
         });
     } else {
       alert("Values cannot be empty!");
     }
-    console.log(product);
   }
 
   return (
@@ -107,6 +109,17 @@ function AddProductForm({ handleAddNewProduct }) {
             value={product.stock_quantity}
             onChange={(e) =>
               setProduct({ ...product, stock_quantity: e.target.value })
+            }
+          />
+
+          <input
+            type="text"
+            name="low_stock_level"
+            className="product-stock-input"
+            placeholder="Low Stock Alert Quantity"
+            value={product.low_stock_level}
+            onChange={(e) =>
+              setProduct({ ...product, low_stock_level: e.target.value })
             }
           />
         </div>

@@ -2,6 +2,15 @@ import React from "react";
 import delt from "../assets/delete.png";
 import edt from "../assets/edit.png";
 function ProductsTable({ products = [], handleDelete, handleEdit }) {
+  function getStockQuantityClassName(stock_quantity, low_stock_level) {
+    if (stock_quantity < low_stock_level) {
+      return "#ff0000";
+    } else if (stock_quantity - low_stock_level <= 5) {
+      return "yellow";
+    } else {
+      return "#00df00";
+    }
+  }
   return (
     <>
       <table>
@@ -12,6 +21,7 @@ function ProductsTable({ products = [], handleDelete, handleEdit }) {
             <th>Category</th>
             <th>Unit Price</th>
             <th>Stock Quantity</th>
+            <th>Low Stock Level</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -22,7 +32,23 @@ function ProductsTable({ products = [], handleDelete, handleEdit }) {
               <td>{product.product_name}</td>
               <td>{product.product_category}</td>
               <td>{product.product_price}</td>
-              <td>{product.stock_quantity}</td>
+              <td>
+                <span
+                  className="stock-quantity-color"
+                  style={{
+                    backgroundColor: `${getStockQuantityClassName(
+                      product.stock_quantity,
+                      product.low_stock_level
+                    )}`,
+                  }}
+                >
+                  {product.stock_quantity}
+                </span>
+              </td>
+              <td>
+                {product.low_stock_level} (
+                {product.stock_quantity - product.low_stock_level})
+              </td>
               <td className="action-btns">
                 <button
                   className="edit-btn"

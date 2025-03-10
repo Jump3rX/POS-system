@@ -23,6 +23,8 @@ urlpatterns = [
     path("api/sales-report", views.sales_report, name="sales-report"),
     path("api/admin-confirm", views.admin_confirm, name="admin-confirm"),
     path("api/chart-data", views.chart_data, name="sales-report"),
+    path("api/stock-data", views.stock_data, name="stock-data"),
+    path("api/bulk-upload", views.bulk_upload, name="bulk-upload"),
 
     
 

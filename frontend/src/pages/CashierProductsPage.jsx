@@ -38,6 +38,7 @@ function CashierProductsPage({ closeProductModal }) {
                     <th>Category</th>
                     <th>Price</th>
                     <th>Stock</th>
+                    <th>Low Stock Level</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -48,6 +49,7 @@ function CashierProductsPage({ closeProductModal }) {
                       <td>{p.product_category}</td>
                       <td>{Number(p.product_price).toLocaleString() || "0"}</td>
                       <td>{p.stock_quantity}</td>
+                      <td>{p.low_stock_level}</td>
                     </tr>
                   ))}
                 </tbody>

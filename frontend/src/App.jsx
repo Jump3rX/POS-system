@@ -12,6 +12,7 @@ import SalesAdminPage from "./pages/SalesAdminPage";
 import AdminProfile from "./pages/AdminProfile";
 import AdminReports from "./pages/AdminReports";
 import CashierProductsPage from "./pages/CashierProductsPage";
+import RestockPage from "./pages/RestockPage";
 import { Layout } from "./Layout";
 import { AuthProvider } from "./context/AuthContext";
 function App() {
@@ -51,6 +52,15 @@ function App() {
                 element={
                   <PrivateRoute requiredRole="admin">
                     <ProductsPage />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/restock"
+                element={
+                  <PrivateRoute requiredRole="admin">
+                    <RestockPage />
                   </PrivateRoute>
                 }
               />
