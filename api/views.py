@@ -4,8 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.utils.timezone import timedelta,now
 from django.utils import timezone
-from django.db.models import Sum
-from django.db.models import Value
+from django.db.models import Sum,Value,F
 from django.db.models.functions import Concat,TruncDate
 from django.db import models
 from decimal import Decimal, InvalidOperation
@@ -13,8 +12,8 @@ from decimal import Decimal, InvalidOperation
 from rest_framework.decorators import api_view,permission_classes
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import ProductsSerializer, UserSerializer,ProfileSerializer,UserProfileSerializer, addSalesSerializer, addSaleItemsSerializer,adminSalesViewSerializer
-from .models import products,Profile,counter_sales,sale_items
+from .serializers import ProductsSerializer, UserSerializer,ProfileSerializer,UserProfileSerializer, addSalesSerializer, addSaleItemsSerializer,adminSalesViewSerializer, productRestockSerializer,restockDeliverySerializer
+from .models import products,Profile,counter_sales,sale_items,restock_orders
 from rest_framework.permissions import IsAuthenticated
 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -162,7 +161,97 @@ def bulk_upload(request):
     except Exception as e:
         print(f"Failed to process CSV file: {str(e)}")
         return Response({"error": f"Failed to process CSV file: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
-    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def stock_data(request):
+    total = products.objects.all().count()
+    low_stock = products.objects.filter(stock_quantity__lte=models.F('low_stock_level')).count()
+    low_stock_products = products.objects.filter(
+        stock_quantity__lte=F('low_stock_level')
+    ).exclude(
+        id__in=restock_orders.objects.filter(status='pending').values_list('product_id', flat=True)
+    )
+
+    pending_restock = products.objects.filter(stock_quantity__lte=models.F('low_stock_level')).count()
+    serialized_products = ProductsSerializer(low_stock_products,many=True).data
+
+    data = {
+        'total_stock':total,
+        'low_stock':low_stock,
+        'low_stock_products':serialized_products,
+        'pending_restock':pending_restock,
+    }
+
+    return Response(data,status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def product_restock(request):
+    if request.method == 'POST':
+
+        try:
+            product_instance = products.objects.get(id = request.data.get('product_id'))
+        except product_instance.DoesNotExist:
+            return Response({'message': 'Invalid product ID'}, status=status.HTTP_400_BAD_REQUEST)
+        restock_data = {
+            'product':product_instance.id,
+            'quantity': request.data.get('quantity'),
+            'approved_by':request.user.id
+        }
+        existing_request = restock_orders.objects.filter(product=product_instance, status="pending").first()
+        if existing_request:
+            return Response({'message': 'A pending restock request already exists for this product.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        data = productRestockSerializer(data = restock_data)
+        if data.is_valid():
+            data.save()
+            print("data saved")
+            return Response({'message':'Restock Order Placed!','data':data.data},status=status.HTTP_200_OK)
+        else:
+            print(f"Error:${data.errors}")
+            return Response({'message':'Error','data':data.errors},status=status.HTTP_400_BAD_REQUEST)
+
+    else:
+        print("Bad request")
+        return Response({'message':'Invalid request'},status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_restock_products(request):
+    products = restock_orders.objects.filter(status='pending')
+    serializer = productRestockSerializer(products, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+def confirm_delivery(request):
+    if request.method == 'POST':
+        restock_order = restock_orders.objects.get(id=request.data.get("restock_order"))
+        product = products.objects.get(id=request.data.get("product_id"))
+        new_stock = int(request.data.get("quantity_delivered"))
+        delivery_data = {
+            "restock_order": restock_order.id,
+            "expected_quantity": request.data.get("expected_quantity"),
+            "quantity_delivered": request.data.get("quantity_delivered"),
+            "delivery_status": request.data.get("delivery_status"),
+            "receiver": request.user.id
+        }
+        serializer = restockDeliverySerializer(data = delivery_data)
+        if serializer.is_valid():
+            serializer.save()
+            if restock_order.quantity == int(request.data.get("quantity_delivered")):
+                restock_order.status = "delivered"
+                restock_order.save()
+            product.stock_quantity += new_stock
+            product.save() 
+            return Response({"message": "Delivery confirmed", "data": serializer.data}, status=status.HTTP_200_OK)
+        else:
+            print(f"Error:{serializer.errors}")
+            return Response({"message":"Error handling data", 'Error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated,isAdminRole])
@@ -527,23 +616,7 @@ def admin_confirm(request):
         return Response({'message':'missing credentials'},status=status.HTTP_400_BAD_REQUEST)
     
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def stock_data(request):
-    total = products.objects.all().count()
-    low_stock = products.objects.filter(stock_quantity__lte=models.F('low_stock_level')).count()
-    low_stock_products = products.objects.filter(stock_quantity__lte=models.F('low_stock_level'))
-    pending_restock = products.objects.filter(stock_quantity__lte=models.F('low_stock_level')).count()
-    serialized_products = ProductsSerializer(low_stock_products,many=True).data
 
-    data = {
-        'total_stock':total,
-        'low_stock':low_stock,
-        'low_stock_products':serialized_products,
-        'pending_restock':pending_restock,
-    }
-
-    return Response(data,status=status.HTTP_200_OK)
 
 
 

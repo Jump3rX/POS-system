@@ -13,6 +13,7 @@ import AdminProfile from "./pages/AdminProfile";
 import AdminReports from "./pages/AdminReports";
 import CashierProductsPage from "./pages/CashierProductsPage";
 import RestockPage from "./pages/RestockPage";
+import RestockDelivery from "./pages/RestockDelivery";
 import { Layout } from "./Layout";
 import { AuthProvider } from "./context/AuthContext";
 function App() {
@@ -61,6 +62,14 @@ function App() {
                 element={
                   <PrivateRoute requiredRole="admin">
                     <RestockPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/restock-delivery"
+                element={
+                  <PrivateRoute requiredRole="admin">
+                    <RestockDelivery />
                   </PrivateRoute>
                 }
               />

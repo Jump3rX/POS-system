@@ -10,6 +10,8 @@ import reports from "../assets/bar.png";
 import profile from "../assets/admin.png";
 import logout from "../assets/exit.png";
 import reg from "../assets/sales-reg.png";
+import delivery from "../assets/delivery.png";
+import restock from "../assets/restock.png";
 
 function Navbar() {
   let { user, logoutUser } = useContext(AuthContext);
@@ -33,7 +35,11 @@ function Navbar() {
                 Products <img src={products} alt="" className="navlink-icon" />
               </Link>
               <Link to="/restock" className="navlink">
-                Restock <img src={products} alt="" className="navlink-icon" />
+                Restock <img src={restock} alt="" className="navlink-icon" />
+              </Link>
+              <Link to="/restock-delivery" className="navlink">
+                Restock Delivery{" "}
+                <img src={delivery} alt="" className="navlink-icon" />
               </Link>
               <Link to="/employees" className="navlink">
                 Employees{" "}

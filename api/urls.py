@@ -25,6 +25,10 @@ urlpatterns = [
     path("api/chart-data", views.chart_data, name="sales-report"),
     path("api/stock-data", views.stock_data, name="stock-data"),
     path("api/bulk-upload", views.bulk_upload, name="bulk-upload"),
+    path("api/product-restock", views.product_restock, name="product-restock"),
+    path("api/restock-delivery", views.get_restock_products, name="product-restock"),
+    path("api/confirm-delivery", views.confirm_delivery),
+    
 
     
 

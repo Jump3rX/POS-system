@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import products, purchase_orders, counter_sales,restock_orders,Profile,sale_items
+from .models import products, purchase_orders, counter_sales,restock_orders,Profile,sale_items,restock_delivery
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -38,4 +38,18 @@ class addSaleItemsSerializer(serializers.ModelSerializer):
 class adminSalesViewSerializer(serializers.ModelSerializer):
     class Meta:
         model = counter_sales
+        fields = '__all__'
+
+class productRestockSerializer(serializers.ModelSerializer):
+    product_id = serializers.CharField(source='product.id', read_only=True)
+    product_name = serializers.CharField(source='product.product_name', read_only=True)
+    product_code = serializers.CharField(source='product.product_code', read_only=True)
+    class Meta:
+        model = restock_orders
+        fields = ['id','product','product_id','product_code', 'product_name','quantity','approved_by','approval_date']
+        
+
+class restockDeliverySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = restock_delivery
         fields = '__all__'
