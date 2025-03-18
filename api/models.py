@@ -71,7 +71,7 @@ class purchase_orders(models.Model):
 class restock_orders(models.Model):
     product = models.ForeignKey(products,on_delete=models.CASCADE)
     quantity = models.IntegerField()
-    status = models.CharField(max_length=100)
+    status = models.CharField(max_length=100,default='pending')
     approved_by = models.ForeignKey(User,on_delete=models.CASCADE)
     approval_date = models.DateTimeField(auto_now_add=True)
 
@@ -80,5 +80,18 @@ class restock_orders(models.Model):
         verbose_name_plural = "restock_orders"
 
     def __str__(self):
-        return self.product
+        return str(self.product)
+
+class restock_delivery(models.Model):
+    restock_order = models.ForeignKey(restock_orders,on_delete=models.CASCADE)
+    expected_quantity = models.IntegerField()
+    quantity_delivered = models.IntegerField()
+    delivery_status = models.CharField(max_length=20)
+    delivery_date = models.DateTimeField(auto_now_add=True)
+    receiver = models.ForeignKey(User,on_delete=models.CASCADE)
+    supplier_name = models.CharField(max_length=255, null=True, blank=True)
+    remarks = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Delivery for {self.restock_order.product.product_name} - {self.delivery_status}"
 

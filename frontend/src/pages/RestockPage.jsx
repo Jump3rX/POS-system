@@ -1,13 +1,20 @@
 import React from "react";
 import { useState, useEffect, useContext } from "react";
+import RestockOrderForm from "../components/RestockOrderForm";
 import AuthContext from "../context/AuthContext";
 
 function RestockPage() {
   const { authTokens, logoutUser } = useContext(AuthContext);
   const [stockData, setStockData] = useState({});
   const [lowStockProducts, setLowStockProducts] = useState([]);
+  const [openModal, setOpenModal] = useState(false);
+  const [productToRestock, setProductToRestock] = useState({});
 
   useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  function fetchProducts() {
     fetch("http://127.0.0.1:8000/api/stock-data", {
       method: "GET",
       headers: {
@@ -26,8 +33,16 @@ function RestockPage() {
         setStockData(data);
         setLowStockProducts(data.low_stock_products);
       });
-  }, []);
-
+  }
+  function openRestockModal(product) {
+    setProductToRestock(product);
+    setOpenModal(true);
+  }
+  function closeRestockModal() {
+    setProductToRestock({});
+    setOpenModal(false);
+    fetchProducts();
+  }
   return (
     <div>
       <div className="restock-page-container">
@@ -83,7 +98,9 @@ function RestockPage() {
                       <td>{product.stock_quantity}</td>
                       <td>{product.low_stock_level}</td>
                       <td>
-                        <button>Restock</button>
+                        <button onClick={() => openRestockModal(product)}>
+                          Restock
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -97,10 +114,32 @@ function RestockPage() {
               </tbody>
             </table>
           </div>
+          {openModal && (
+            <RestockOrderForm
+              closeModal={closeRestockModal}
+              product={productToRestock}
+            />
+          )}
         </div>
 
         <div className="side-panel">
-          <h2>Side panel</h2>
+          <h2>Restock Requests</h2>
+          <div className="restock-request-list">
+            <ul className="restock-list">
+              <li>
+                Restock request <button>View</button>
+              </li>
+              <li>
+                Restock request <button>View</button>
+              </li>
+              <li>
+                Restock request <button>View</button>
+              </li>
+              <li>
+                Restock request <button>View</button>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
