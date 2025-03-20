@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import AuthContext from "../context/AuthContext";
 import home from "../assets/home.png";
 import sales from "../assets/sales.png";
@@ -15,74 +15,135 @@ import restock from "../assets/restock.png";
 
 function Navbar() {
   let { user, logoutUser } = useContext(AuthContext);
+
   return (
     <div className="navbar">
       {user ? (
         <>
           {user.role === "admin" && (
             <>
-              <Link to="/admin" className="navlink">
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  "navlink" + (isActive ? " active" : "")
+                }
+              >
                 Home <img src={home} alt="" className="navlink-icon" />
-              </Link>
-              <Link to="/sales" className="navlink">
+              </NavLink>
+              <NavLink
+                to="/sales"
+                className={({ isActive }) =>
+                  "navlink" + (isActive ? " active" : "")
+                }
+              >
                 Sales <img src={sales} alt="" className="navlink-icon" />
-              </Link>
-              <Link to="/customers" className="navlink">
+              </NavLink>
+              <NavLink
+                to="/customers"
+                className={({ isActive }) =>
+                  "navlink" + (isActive ? " active" : "")
+                }
+              >
                 Customers{" "}
                 <img src={customers} alt="" className="navlink-icon" />
-              </Link>
-              <Link to="/products" className="navlink">
+              </NavLink>
+              <NavLink
+                to="/products"
+                className={({ isActive }) =>
+                  "navlink" + (isActive ? " active" : "")
+                }
+              >
                 Products <img src={products} alt="" className="navlink-icon" />
-              </Link>
-              <Link to="/restock" className="navlink">
+              </NavLink>
+              <NavLink
+                to="/restock"
+                className={({ isActive }) =>
+                  "navlink" + (isActive ? " active" : "")
+                }
+              >
                 Restock <img src={restock} alt="" className="navlink-icon" />
-              </Link>
-              <Link to="/restock-delivery" className="navlink">
+              </NavLink>
+              <NavLink
+                to="/restock-delivery"
+                className={({ isActive }) =>
+                  "navlink" + (isActive ? " active" : "")
+                }
+              >
                 Restock Delivery{" "}
                 <img src={delivery} alt="" className="navlink-icon" />
-              </Link>
-              <Link to="/employees" className="navlink">
+              </NavLink>
+              <NavLink
+                to="/employees"
+                className={({ isActive }) =>
+                  "navlink" + (isActive ? " active" : "")
+                }
+              >
                 Employees{" "}
                 <img src={employees} alt="" className="navlink-icon" />
-              </Link>
-              <Link to="/admin-reports" className="navlink">
+              </NavLink>
+              <NavLink
+                to="/admin-reports"
+                className={({ isActive }) =>
+                  "navlink" + (isActive ? " active" : "")
+                }
+              >
                 Reports <img src={reports} alt="" className="navlink-icon" />
-              </Link>
-              {/* <Link to="/admin-profile" className="navlink">
+              </NavLink>
+              {/* <NavLink
+                to="/admin-profile"
+                className={({ isActive }) => "navlink" + (isActive ? " active" : "")}
+              >
                 Profile <img src={profile} alt="" className="navlink-icon" />
-              </Link> */}
+              </NavLink> */}
             </>
           )}
           {user.role === "cashier" && (
             <>
-              <Link to="/cashier-dashboard" className="navlink">
+              <NavLink
+                to="/cashier-dashboard"
+                className={({ isActive }) =>
+                  "navlink" + (isActive ? " active" : "")
+                }
+              >
                 Dashboard <img src={home} alt="" className="navlink-icon" />
-              </Link>
-              <Link to="/cashier-sales" className="navlink">
+              </NavLink>
+              <NavLink
+                to="/cashier-sales"
+                className={({ isActive }) =>
+                  "navlink" + (isActive ? " active" : "")
+                }
+              >
                 Sales <img src={reg} alt="" className="navlink-icon" />
-              </Link>
-
-              {/* <Link to="/all-products" className="navlink">
+              </NavLink>
+              {/* <NavLink
+                to="/all-products"
+                className={({ isActive }) => "navlink" + (isActive ? " active" : "")}
+              >
                 Products <img src={products} alt="" className="navlink-icon" />
-              </Link> */}
+              </NavLink> */}
             </>
           )}
 
-          <Link
+          <NavLink
             to="/"
-            className="navlink"
+            className={({ isActive }) =>
+              "navlink" + (isActive ? " active" : "")
+            }
             onClick={(e) => {
-              e.preventDefault(); // Prevent navigation before logout
+              e.preventDefault();
               logoutUser();
             }}
           >
             Logout <img src={logout} alt="" className="navlink-icon" />
-          </Link>
+          </NavLink>
         </>
       ) : (
-        <Link to="/" className="navlink">
+        <NavLink
+          to="/"
+          className={({ isActive }) => "navlink" + (isActive ? " active" : "")}
+        >
           Login
-        </Link>
+        </NavLink>
       )}
     </div>
   );
