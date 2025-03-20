@@ -21,6 +21,12 @@ urlpatterns = [
     path('api/reports-dashboard',views.reports_dashboard),
     path("api/inventory-report", views.inventory_report, name="inventory-report"),
     path("api/sales-report", views.sales_report, name="sales-report"),
+    path("api/monthly-sales-report", views.monthly_sales_report, name="sales-report"),
+    path("api/weekly-sales-report", views.weekly_sales_report, name="sales-report"),
+    path("api/daily-sales-report", views.daily_sales_report, name="sales-report"),
+
+
+    path("api/low-stock-report", views.low_stock_products_report),
     path("api/admin-confirm", views.admin_confirm, name="admin-confirm"),
     path("api/chart-data", views.chart_data, name="sales-report"),
     path("api/stock-data", views.stock_data, name="stock-data"),

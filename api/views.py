@@ -21,11 +21,12 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .permissions import isAdminRole
 
-from reportlab.lib.pagesizes import A4,letter
+from reportlab.lib.pagesizes import A4,letter, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
-from reportlab.platypus import Table, TableStyle,SimpleDocTemplate
+from reportlab.platypus import Table, TableStyle,SimpleDocTemplate, Paragraph,Spacer
 from reportlab.lib.units import inch
+from reportlab.lib.styles import getSampleStyleSheet,ParagraphStyle
 import io
 import pandas as pd
 # Create your views here.
@@ -539,6 +540,39 @@ def inventory_report(request):
 
     return reponse
 
+@permission_classes([IsAuthenticated,isAdminRole])
+def low_stock_products_report(request):
+    reponse  = HttpResponse(content_type='application/pdf')
+    reponse['Content-Disposition'] = 'attachment; filename="Low Stock Products.pdf"'
+    pdf = canvas.Canvas(reponse,pagesize=A4)
+    width,height = A4
+
+    pdf.setFont("Helvetica-Bold",16)
+    pdf.drawString(200,height-50,'Low Stock Products')
+    all_products = products.objects.filter(stock_quantity__lte=models.F('low_stock_level')).values_list('product_code', 'product_name', 'product_price', 'stock_quantity','low_stock_level')
+
+    data = [["Code","Product Name","Price","Quantity","Low Stock Alert"]]
+    for product in all_products:
+        data.append(list(product))
+    
+    table = Table(data,colWidths=[80,150,100,100])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+
+    table.wrapOn(pdf,width,height)
+    table.drawOn(pdf,50,height-200)
+
+    pdf.save()
+
+    return reponse
+
 
 
 @permission_classes([IsAuthenticated,isAdminRole])
@@ -596,6 +630,262 @@ def sales_report(request):
     doc.build(elements)
 
     return response
+
+
+@permission_classes([IsAuthenticated,isAdminRole])
+def monthly_sales_report(request):
+    thirty_days = timezone.now() - timedelta(days=30)
+    reponse  = HttpResponse(content_type='application/pdf')
+    reponse['Content-Disposition'] = 'attachment; filename="Monthly Sales Report.pdf"'
+    doc = SimpleDocTemplate(reponse, pagesize=landscape(A4), topMargin=50, bottomMargin=50, leftMargin=30, rightMargin=30)
+    elements = []
+
+    # Title
+    styles = getSampleStyleSheet()
+    title = Paragraph("Monthly Sales Report", styles['Title'])
+    elements.append(title)
+    elements.append(Spacer(1, 20))  # Add space below title
+    # Calculate total sales amount and total products sold
+    sales_in_period = counter_sales.objects.filter(sale_date__gte=thirty_days)
+    total_sales_amount = sales_in_period.aggregate(Sum('total'))['total__sum'] or 0
+    total_products_sold = sale_items.objects.filter(sale__sale_date__gte=thirty_days).count()
+
+    summary_style = ParagraphStyle(
+        name='Summary',
+        parent=styles['Normal'],
+        fontSize=14,  # Increase font size (default is 10)
+        leading=16,   # Adjust leading (line spacing) to match larger font
+    )
+
+    # Add summary paragraph
+    summary_text = (
+        f"This month, total sales amount to <b>Ksh {total_sales_amount:,.2f}</b> "
+        f"and total products sold are <b>{total_products_sold}</b>."
+    )
+    summary = Paragraph(summary_text, summary_style)
+    elements.append(summary)
+    elements.append(Spacer(1, 20))  # Space below summary
+
+    all_sales = sale_items.objects.filter(
+        sale__sale_date__gte=thirty_days
+    ).values_list(
+        'product__product_code',
+        'product__product_name',
+        'sale__seller_id__username',
+        'sale__total',
+        'sale__payment_method',
+        'sale__sale_date',
+        'sale__amount_tendered',
+        'sale__change',
+        flat=False
+    )
+
+
+    data = [["Product Code", "Product Name", "Seller", "Total", "Payment Method", "Sale Date", "Amount Tendered", "Change"]]
+    for sale_item in all_sales:
+        product_code, product_name, seller, total, payment_method, sale_date, amount_tendered, change = sale_item
+        data.append([
+            product_code,
+            product_name,
+            seller,
+            str(total),
+            payment_method,
+            sale_date.strftime('%Y-%m-%d %H:%M:%S'),  # Format datetime
+            str(amount_tendered) if amount_tendered is not None else "N/A",
+            str(change) if change is not None else "N/A",
+        ])
+
+    
+    
+    table = Table(data, colWidths=[80, 180, 50, 80, 120, 100, 100, 50])  
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10), 
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  
+        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),  
+    ]))
+
+
+    elements.append(table)
+    doc.build(elements)
+
+    return reponse
+
+@permission_classes([IsAuthenticated,isAdminRole])
+def weekly_sales_report(request):
+    seven_days = timezone.now() - timedelta(days=7)
+    reponse  = HttpResponse(content_type='application/pdf')
+    reponse['Content-Disposition'] = 'attachment; filename="Weekly Sales Report.pdf"'
+    doc = SimpleDocTemplate(reponse, pagesize=landscape(A4), topMargin=50, bottomMargin=50, leftMargin=30, rightMargin=30)
+    elements = []
+
+    # Title
+    styles = getSampleStyleSheet()
+    title = Paragraph("Weekly Sales Report", styles['Title'])
+    elements.append(title)
+    elements.append(Spacer(1, 20))  
+    
+    sales_in_period = counter_sales.objects.filter(sale_date__gte=seven_days)
+    total_sales_amount = sales_in_period.aggregate(Sum('total'))['total__sum'] or 0
+    total_products_sold = sale_items.objects.filter(sale__sale_date__gte=seven_days).count()
+
+    summary_style = ParagraphStyle(
+        name='Summary',
+        parent=styles['Normal'],
+        fontSize=14,  
+        leading=16,   
+    )
+
+    
+    summary_text = (
+        f"This week, total sales amount to <b>Ksh {total_sales_amount:,.2f}</b> "
+        f"and total products sold are <b>{total_products_sold}</b>."
+    )
+    summary = Paragraph(summary_text, summary_style)
+    elements.append(summary)
+    elements.append(Spacer(1, 20))  
+
+    all_sales = sale_items.objects.filter(
+        sale__sale_date__gte=seven_days
+    ).values_list(
+        'product__product_code',
+        'product__product_name',
+        'sale__seller_id__username',
+        'sale__total',
+        'sale__payment_method',
+        'sale__sale_date',
+        'sale__amount_tendered',
+        'sale__change',
+        flat=False
+    )
+
+
+    data = [["Product Code", "Product Name", "Seller", "Total", "Payment Method", "Sale Date", "Amount Tendered", "Change"]]
+    for sale_item in all_sales:
+        product_code, product_name, seller, total, payment_method, sale_date, amount_tendered, change = sale_item
+        data.append([
+            product_code,
+            product_name,
+            seller,
+            str(total),
+            payment_method,
+            sale_date.strftime('%Y-%m-%d %H:%M:%S'),  
+            str(amount_tendered) if amount_tendered is not None else "N/A",
+            str(change) if change is not None else "N/A",
+        ])
+
+    
+    
+    table = Table(data, colWidths=[80, 180, 50, 80, 120, 100, 100, 50])  
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),  
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), 
+        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),  
+    ]))
+
+
+    elements.append(table)
+    doc.build(elements)
+
+    return reponse
+
+
+@permission_classes([IsAuthenticated,isAdminRole])
+def daily_sales_report(request):
+    one_day = timezone.now() - timedelta(days=1)
+    reponse  = HttpResponse(content_type='application/pdf')
+    reponse['Content-Disposition'] = 'attachment; filename="Daily Sales Report.pdf"'
+    doc = SimpleDocTemplate(reponse, pagesize=landscape(A4), topMargin=50, bottomMargin=50, leftMargin=30, rightMargin=30)
+    elements = []
+
+    styles = getSampleStyleSheet()
+    title = Paragraph("Daily Sales Report", styles['Title'])
+    elements.append(title)
+    elements.append(Spacer(1, 20))  
+    
+    sales_in_period = counter_sales.objects.filter(sale_date__gte=one_day)
+    total_sales_amount = sales_in_period.aggregate(Sum('total'))['total__sum'] or 0
+    total_products_sold = sale_items.objects.filter(sale__sale_date__gte=one_day).count()
+
+    summary_style = ParagraphStyle(
+        name='Summary',
+        parent=styles['Normal'],
+        fontSize=14,  
+        leading=16,   
+    )
+
+    
+    summary_text = (
+        f"In the last 1(one) day, total sales amount to <b>Ksh {total_sales_amount:,.2f}</b> "
+        f"and total products sold are <b>{total_products_sold}</b>."
+    )
+    summary = Paragraph(summary_text, summary_style)
+    elements.append(summary)
+    elements.append(Spacer(1, 20))  
+
+    all_sales = sale_items.objects.filter(
+        sale__sale_date__gte=one_day
+    ).values_list(
+        'product__product_code',
+        'product__product_name',
+        'sale__seller_id__username',
+        'sale__total',
+        'sale__payment_method',
+        'sale__sale_date',
+        'sale__amount_tendered',
+        'sale__change',
+        flat=False
+    )
+
+
+    data = [["Product Code", "Product Name", "Seller", "Total", "Payment Method", "Sale Date", "Amount Tendered", "Change"]]
+    for sale_item in all_sales:
+        product_code, product_name, seller, total, payment_method, sale_date, amount_tendered, change = sale_item
+        data.append([
+            product_code,
+            product_name,
+            seller,
+            str(total),
+            payment_method,
+            sale_date.strftime('%Y-%m-%d %H:%M:%S'),  
+            str(amount_tendered) if amount_tendered is not None else "N/A",
+            str(change) if change is not None else "N/A",
+        ])
+
+    table = Table(data, colWidths=[80, 180, 50, 80, 120, 100, 100, 50])  
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),  
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), 
+        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),  
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+
+    return reponse
+
+
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

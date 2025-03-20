@@ -84,6 +84,118 @@ function AdminReports() {
       });
   }
 
+  function downloadLowStockReport(e) {
+    e.preventDefault();
+    fetch("http://127.0.0.1:8000/api/low-stock-report", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/pdf",
+        "Authorization": "Bearer " + String(authTokens.access),
+      },
+    })
+      .then((res) => {
+        if (res.status === 200) {
+          return res.blob();
+        } else if (res.statusText === "Unauthorized") {
+          logoutUser();
+        }
+      })
+      .then((data) => {
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "low_stock_report.pdf";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      });
+  }
+
+  function downloadMonthlySalesReport(e) {
+    e.preventDefault();
+    fetch("http://127.0.0.1:8000/api/monthly-sales-report", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/pdf",
+        "Authorization": "Bearer " + String(authTokens.access),
+      },
+    })
+      .then((res) => {
+        if (res.status === 200) {
+          return res.blob();
+        } else if (res.statusText === "Unauthorized") {
+          logoutUser();
+        }
+      })
+      .then((data) => {
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "mothly_sales_report.pdf";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      });
+  }
+
+  function downloadWeeklySalesReport(e) {
+    e.preventDefault();
+    fetch("http://127.0.0.1:8000/api/weekly-sales-report", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/pdf",
+        "Authorization": "Bearer " + String(authTokens.access),
+      },
+    })
+      .then((res) => {
+        if (res.status === 200) {
+          return res.blob();
+        } else if (res.statusText === "Unauthorized") {
+          logoutUser();
+        }
+      })
+      .then((data) => {
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "weekly_sales_report.pdf";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      });
+  }
+
+  function downloadDailySalesReport(e) {
+    e.preventDefault();
+    fetch("http://127.0.0.1:8000/api/daily-sales-report", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/pdf",
+        "Authorization": "Bearer " + String(authTokens.access),
+      },
+    })
+      .then((res) => {
+        if (res.status === 200) {
+          return res.blob();
+        } else if (res.statusText === "Unauthorized") {
+          logoutUser();
+        }
+      })
+      .then((data) => {
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "daily_sales_report.pdf";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      });
+  }
+
   return (
     <>
       {loading ? (
@@ -155,6 +267,22 @@ function AdminReports() {
               </button>
               <button onClick={(e) => downloadSalesReport(e)}>
                 Sales Records
+              </button>
+
+              <button onClick={(e) => downloadLowStockReport(e)}>
+                Low Stock Report
+              </button>
+
+              <button onClick={(e) => downloadMonthlySalesReport(e)}>
+                Monthly Sales Report
+              </button>
+
+              <button onClick={(e) => downloadWeeklySalesReport(e)}>
+                Weekly Sales Report
+              </button>
+
+              <button onClick={(e) => downloadDailySalesReport(e)}>
+                Daily Sales Report
               </button>
             </div>
           </div>
