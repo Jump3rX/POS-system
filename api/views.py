@@ -495,6 +495,15 @@ def reports_dashboard(request):
     weekly_sales = counter_sales.objects.filter(sale_date__gte=seven_days).aggregate(total=Sum('total'))['total']
     monthly_sales = counter_sales.objects.filter(sale_date__gte=monthly_days).aggregate(total=Sum('total'))['total']
 
+    top_products = (
+        sale_items.objects
+        .values('product__product_code', 'product__product_name')  
+        .annotate(total_quantity=Sum('quantity'))  
+        .order_by('-total_quantity')  
+        [:5]  
+    )
+    top_products_list = list(top_products)
+
     weekly_product_sales = counter_sales.objects.filter(sale_date__gte=seven_days).count()
     monthly_product_sales = counter_sales.objects.filter(sale_date__gte=monthly_days).count()
     dash_data = {
@@ -503,7 +512,8 @@ def reports_dashboard(request):
         'stock_data':stock_data,
         'employee_data':employee_data,
         'weekly_product_sales':weekly_product_sales,
-        'monthly_product_sales':monthly_product_sales
+        'monthly_product_sales':monthly_product_sales,
+        'top_products':top_products_list
     }
     return Response(dash_data,status=status.HTTP_200_OK)
 
