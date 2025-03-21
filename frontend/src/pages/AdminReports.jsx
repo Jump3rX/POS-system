@@ -6,6 +6,7 @@ import AuthContext from "../context/AuthContext";
 function AdminReports() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({});
+  const [topProducts, setTopProducts] = useState([]);
   let { logoutUser, authTokens } = useContext(AuthContext);
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/reports-dashboard", {
@@ -25,6 +26,7 @@ function AdminReports() {
       .then((data) => {
         setData(data);
         setLoading(false);
+        setTopProducts(data.top_products);
       });
   }, []);
 
@@ -227,35 +229,31 @@ function AdminReports() {
           <div className="chart-downloads-section">
             <div className="revenue-chart">
               <div className="chart">
-                <h2>Revenue Summary</h2>
+                <h2>Most Sold Products</h2>
                 <table>
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Total Sales (KES)</th>
-                      <th>Expenses (KES)</th>
-                      <th>Net Revenue (KES)</th>
+                      <th>Product Code</th>
+                      <th>Product Name</th>
+                      <th>Quantity Sold</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td>2025-02-10</td>
-                      <td>50,000</td>
-                      <td>20,000</td>
-                      <td>30,000</td>
-                    </tr>
-                    <tr>
-                      <td>2025-02-09</td>
-                      <td>45,000</td>
-                      <td>15,000</td>
-                      <td>30,000</td>
-                    </tr>
-                    <tr>
-                      <td>2025-02-08</td>
-                      <td>60,000</td>
-                      <td>25,000</td>
-                      <td>35,000</td>
-                    </tr>
+                    {topProducts.length > 0 ? (
+                      topProducts.map((product) => (
+                        <tr key={product.id}>
+                          <td>{product.product__product_code}</td>
+                          <td>{product.product__product_name}</td>
+                          <td>{product.total_quantity}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={3} style={{ textAlign: "center" }}>
+                          No Items to view
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
