@@ -1,8 +1,10 @@
 import React from "react";
-import { useState, useContext } from "react";
-import AuthContext from "../context/AuthContext";
-function RestockDeliveryVerificationForm({ handleCloseModal, product }) {
-  const { authTokens, logoutUser } = useContext(AuthContext);
+import { useState } from "react";
+function RestockDeliveryVerificationForm({
+  handleCloseModal,
+  product,
+  handleSubmit,
+}) {
   const [deliveryInfo, setDeliveryInfo] = useState({
     restock_order: product.id,
     product_id: product.product_id,
@@ -10,7 +12,11 @@ function RestockDeliveryVerificationForm({ handleCloseModal, product }) {
     quantity_delivered: "",
     delivery_status: "",
   });
-
+  function onFormSubmit(e) {
+    e.preventDefault();
+    handleSubmit(deliveryInfo);
+    closeDelivery();
+  }
   function closeDelivery() {
     setDeliveryInfo({
       restock_order: product.id,
@@ -20,31 +26,7 @@ function RestockDeliveryVerificationForm({ handleCloseModal, product }) {
     });
     handleCloseModal();
   }
-  function handleSubmit(e) {
-    e.preventDefault();
-    console.log(deliveryInfo);
-    fetch(`http://127.0.0.1:8000/api/confirm-delivery`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + String(authTokens.access),
-      },
-      body: JSON.stringify(deliveryInfo),
-    })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to update!");
-        } else if (res.statusText === "Unauthorized") {
-          logoutUser();
-        } else {
-          return res.json();
-        }
-      })
-      .then((data) => {
-        console.log(data);
-        closeDelivery();
-      });
-  }
+
   return (
     <div className="modal">
       <div className="modal-content">
@@ -55,7 +37,7 @@ function RestockDeliveryVerificationForm({ handleCloseModal, product }) {
         <p>Expected quantity: {product.quantity}</p>
         <hr />
         <h5>Confirm Delivery</h5>
-        <form action="" onSubmit={handleSubmit}>
+        <form action="" onSubmit={onFormSubmit}>
           <label htmlFor="">Delivered Quantity</label>
           <input
             type="number"
