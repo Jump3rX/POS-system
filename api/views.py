@@ -6,7 +6,8 @@ from django.utils.timezone import timedelta,now
 from django.utils import timezone
 from django.db.models import Sum,Value,F
 from django.db.models.functions import Concat,TruncDate
-from django.db import models
+from django.db import models,transaction
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
 from rest_framework.decorators import api_view,permission_classes
@@ -252,6 +253,72 @@ def confirm_delivery(request):
         else:
             print(f"Error:{serializer.errors}")
             return Response({"message":"Error handling data", 'Error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def multi_confirm(request):
+    if request.method == 'POST':
+        data = request.data
+        if not isinstance(data, list):
+            return Response(
+                {"error": "This endpoint expects a list of delivery items"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        results = []
+        errors = []
+
+        for item in data:
+            try:
+                # Fetch related objects
+                restock_order = restock_orders.objects.get(id=item.get("restock_order"))
+                product = products.objects.get(id=item.get("product_id"))
+
+                # Prepare delivery data
+                delivery_data = {
+                    "restock_order": restock_order.id,
+                    "expected_quantity": item.get("expected_quantity"),
+                    "quantity_delivered": item.get("delivered_quantity"),  # Match frontend field name
+                    "delivery_status": item.get("delivery_status"),
+                    "receiver": request.user.id,
+                }
+
+                # Validate and save delivery data
+                serializer = restockDeliverySerializer(data=delivery_data)
+                if serializer.is_valid():
+                    serializer.save()
+
+                    # Update restock order status
+                    quantity_delivered = int(item.get("delivered_quantity", 0))
+                    if restock_order.quantity == quantity_delivered:
+                        restock_order.status = "delivered"
+                        restock_order.save()
+
+                    # Update product stock
+                    product.stock_quantity += quantity_delivered
+                    product.save()
+
+                    # Add to results
+                    results.append({"message": "Delivery confirmed", "data": serializer.data})
+                else:
+                    errors.append({"error": serializer.errors, "item": item})
+            except restock_orders.DoesNotExist:
+                errors.append({"error": f"Restock order {item.get('restock_order')} not found", "item": item})
+            except products.DoesNotExist:
+                errors.append({"error": f"Product {item.get('product_id')} not found", "item": item})
+            except Exception as e:
+                errors.append({"error": str(e), "item": item})
+
+        # Return a single response after processing all items
+        if errors:
+            return Response(
+                {"message": "Some deliveries failed", "results": results, "errors": errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response(
+            {"message": "All deliveries confirmed", "results": results},
+            status=status.HTTP_200_OK
+        )
 
 
 @api_view(['POST'])
@@ -894,8 +961,223 @@ def daily_sales_report(request):
 
     return reponse
 
+@permission_classes([IsAuthenticated])
+def single_product_report(request):
+    # one_day = timezone.now() - timedelta(days=1)
+    product_code = request.GET.get('product_code')
+    try:
+        product = products.objects.get(product_code=product_code)
+        product_id = product.id
+    except product.DoesNotExist:
+        return Response(
+            {"error": f"Product with code {product_code} not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    reponse  = HttpResponse(content_type='application/pdf')
+    reponse['Content-Disposition'] = 'attachment; filename="Single Product Sales Report.pdf"'
+    doc = SimpleDocTemplate(reponse, pagesize=landscape(A4), topMargin=50, bottomMargin=50, leftMargin=30, rightMargin=30)
+    elements = []
+
+    styles = getSampleStyleSheet()
+    title = Paragraph("Single Product Sales Report", styles['Title'])
+    elements.append(title)
+    elements.append(Spacer(1, 20))  
+    
+    # sales_in_period = counter_sales.objects.filter(s)
+    # total_sales_amount = sales_in_period.aggregate(Sum('total'))['total__sum'] or 0
+    total_products_sold = sale_items.objects.filter(product= product_id).count()
+
+    summary_style = ParagraphStyle(
+        name='Summary',
+        parent=styles['Normal'],
+        fontSize=14,  
+        leading=16,   
+    )
+
+    
+    summary_text = (
+        #f"In the last 1(one) day, total sales amount to <b>Ksh {total_sales_amount:,.2f}</b> "
+        f"Total product sales add up to <b>{total_products_sold}</b>."
+    )
+    summary = Paragraph(summary_text, summary_style)
+    elements.append(summary)
+    elements.append(Spacer(1, 20))  
+
+    all_sales = sale_items.objects.filter(
+        product = product_id
+    ).values_list(
+        'product__product_code',
+        'product__product_name',
+        'sale__seller_id__username',
+        'sale__sale_date',
+        'quantity',
+        flat=False
+    )
 
 
+    data = [["Product Code", "Product Name", "Seller", "Sale Date", "Quantity Sold"]]
+    for sale_item in all_sales:
+        product_code, product_name, seller, sale_date,quantity = sale_item
+        data.append([
+            product_code,
+            product_name,
+            seller,    
+            sale_date.strftime('%Y-%m-%d %H:%M:%S'),  
+            quantity,
+        ])
+
+    table = Table(data, colWidths=[80, 180, 50, 120, 120])  
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),  
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), 
+        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),  
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+
+    return reponse
+    
+
+@permission_classes([IsAuthenticated,isAdminRole])
+def custom_dates_report(request):
+    
+    from_date_str = request.GET.get('from')
+    to_date_str = request.GET.get('to')
+
+    
+    if not from_date_str or not to_date_str:
+        return Response(
+            {"error": "Both 'from' and 'to' dates are required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Parse the dates
+    try:
+        from_date = datetime.strptime(from_date_str, '%Y-%m-%d')
+        to_date = datetime.strptime(to_date_str, '%Y-%m-%d')
+        # Ensure to_date is inclusive by adding one day and setting time to 23:59:59
+        to_date = to_date.replace(hour=23, minute=59, second=59)
+    except ValueError:
+        return Response(
+            {"error": "Invalid date format. Use YYYY-MM-DD (e.g., 2025-01-01)"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Validate that from_date is not after to_date
+    if from_date > to_date:
+        return Response(
+            {"error": "'from' date must be before or equal to 'to' date"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Convert to timezone-aware datetime if needed
+    from_date = timezone.make_aware(from_date)
+    to_date = timezone.make_aware(to_date)
+
+    # Initialize the PDF response
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="sales_report_{from_date_str}_to_{to_date_str}.pdf"'
+    doc = SimpleDocTemplate(response, pagesize=landscape(A4), topMargin=50, bottomMargin=50, leftMargin=30, rightMargin=30)
+    elements = []
+
+    styles = getSampleStyleSheet()
+    title = Paragraph(f"Sales Report from {from_date_str} to {to_date_str}", styles['Title'])
+    elements.append(title)
+    elements.append(Spacer(1, 20))
+
+    # Filter sales within the date range
+    sales_in_period = counter_sales.objects.filter(
+        sale_date__gte=from_date,
+        sale_date__lte=to_date
+    )
+    total_sales_amount = sales_in_period.aggregate(Sum('total'))['total__sum'] or 0
+    total_products_sold = sale_items.objects.filter(
+        sale__sale_date__gte=from_date,
+        sale__sale_date__lte=to_date
+    ).count()
+
+    summary_style = ParagraphStyle(
+        name='Summary',
+        parent=styles['Normal'],
+        fontSize=14,
+        leading=16,
+    )
+
+    summary_text = (
+        f"From {from_date_str} to {to_date_str}, total sales amount to <b>Ksh {total_sales_amount:,.2f}</b> "
+        f"and total products sold are <b>{total_products_sold}</b>."
+    )
+    summary = Paragraph(summary_text, summary_style)
+    elements.append(summary)
+    elements.append(Spacer(1, 20))
+
+    # Fetch sales data within the date range
+    all_sales = sale_items.objects.filter(
+        sale__sale_date__gte=from_date,
+        sale__sale_date__lte=to_date
+    ).values_list(
+        'product__product_code',
+        'product__product_name',
+        'sale__seller_id__username',
+        'sale__total',
+        'sale__payment_method',
+        'sale__sale_date',
+        'sale__amount_tendered',
+        'sale__change',
+        flat=False
+    )
+
+    # Check if there are any sales in the date range
+    if not all_sales:
+        summary_text = f"No sales found between {from_date_str} and {to_date_str}."
+        summary = Paragraph(summary_text, summary_style)
+        elements.append(summary)
+        doc.build(elements)
+        return response
+
+    # Prepare table data
+    data = [["Product Code", "Product Name", "Seller", "Total", "Payment Method", "Sale Date", "Amount Tendered", "Change"]]
+    for sale_item in all_sales:
+        product_code, product_name, seller, total, payment_method, sale_date, amount_tendered, change = sale_item
+        data.append([
+            product_code,
+            product_name,
+            seller,
+            str(total),
+            payment_method,
+            sale_date.strftime('%Y-%m-%d %H:%M:%S'),
+            str(amount_tendered) if amount_tendered is not None else "N/A",
+            str(change) if change is not None else "N/A",
+        ])
+
+    # Create and style the table
+    table = Table(data, colWidths=[80, 180, 50, 80, 120, 100, 100, 50])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+
+    return response
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

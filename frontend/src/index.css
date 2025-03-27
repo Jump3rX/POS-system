@@ -795,6 +795,7 @@ thead {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   gap: 20px;
   width: 100%;
   margin-top: 10px;
@@ -802,7 +803,8 @@ thead {
 .report-cards {
   display: flex;
   flex-direction: row;
-  justify-content: space-evenly;
+  justify-content: space-between;
+  gap: 10px;
 }
 .report-card {
   background-color: #ebebeb;
@@ -812,7 +814,7 @@ thead {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  width: 15%;
+  width: 20%;
 }
 .report-card h2 {
   margin-bottom: 0;
@@ -839,5 +841,15 @@ thead {
 }
 .downloads-section h2 {
   margin-bottom: 0px;
+}
+.custom-download-section {
+  background: #ebebeb;
+  padding: 15px;
+  border-radius: 13px;
+}
+.single-product-input {
+  padding: 5px;
+  width: 300px;
+  margin-right: 5px;
 }
 /*============================================*/

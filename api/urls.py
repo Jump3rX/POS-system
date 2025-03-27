@@ -22,8 +22,10 @@ urlpatterns = [
     path("api/inventory-report", views.inventory_report, name="inventory-report"),
     path("api/sales-report", views.sales_report, name="sales-report"),
     path("api/monthly-sales-report", views.monthly_sales_report, name="sales-report"),
-    path("api/weekly-sales-report", views.weekly_sales_report, name="sales-report"),
-    path("api/daily-sales-report", views.daily_sales_report, name="sales-report"),
+    path("api/weekly-sales-report", views.weekly_sales_report),
+    path("api/daily-sales-report", views.daily_sales_report),
+    path("api/single-product-report", views.single_product_report),
+    path("api/custom-dates-report", views.custom_dates_report),
 
 
     path("api/low-stock-report", views.low_stock_products_report),
@@ -34,6 +36,7 @@ urlpatterns = [
     path("api/product-restock", views.product_restock, name="product-restock"),
     path("api/restock-delivery", views.get_restock_products, name="product-restock"),
     path("api/confirm-delivery", views.confirm_delivery),
+    path("api/multi-confirm", views.multi_confirm),
     
 
     
