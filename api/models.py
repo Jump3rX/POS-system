@@ -1,14 +1,21 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User,Permission
+
+class Role(models.Model):
+    name = models.CharField(max_length=50,unique=True)
+    permissions = models.ManyToManyField(Permission, blank=True)
+
+    def __str__(self):
+        return self.name
 
 class Profile(models.Model):
     user = models.OneToOneField(User,on_delete=models.CASCADE, related_name='profile')
     phone = models.CharField(max_length=13)
-    role = models.CharField(max_length=20)
+    role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         verbose_name_plural = "profile"
-
+        
     def __str__(self):
         return self.user.username
 
@@ -17,15 +24,22 @@ class products(models.Model):
     product_code = models.IntegerField(unique=True)
     product_name = models.CharField(max_length=100)
     product_category = models.CharField(max_length=100)
-    product_price = models.DecimalField(max_digits=10, decimal_places=2)
-    stock_quantity = models.IntegerField()
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2)
+    cost_price = models.DecimalField(max_digits=10, decimal_places=2)
+    quantity = models.IntegerField(default=0)
     low_stock_level = models.IntegerField()
+    expiry_date = models.DateField(null=True, blank=True)
+    batch_number = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    added_on = models.DateTimeField(auto_now_add=True)
+
 
     class Meta:
         verbose_name_plural = "products"
-
+        
     def __str__(self):
-        return str(self.product_code)
+        return f"{self.product.product_name} - {self.product_code}"
+
+
 
 class counter_sales(models.Model):
     seller_id = models.ForeignKey(User,on_delete=models.CASCADE)
@@ -37,6 +51,7 @@ class counter_sales(models.Model):
 
     class Meta:
         verbose_name_plural = "counter_sales"
+        
 
     def __str__(self):
         return str(self.sale_date)
@@ -49,6 +64,7 @@ class sale_items(models.Model):
 
     class Meta:
         verbose_name_plural = 'sale_items'
+        
 
     def __str__(self):
         return str(self.sale)
@@ -92,6 +108,30 @@ class restock_delivery(models.Model):
     supplier_name = models.CharField(max_length=255, null=True, blank=True)
     remarks = models.TextField(null=True, blank=True)
 
+        
     def __str__(self):
         return f"Delivery for {self.restock_order.product.product_name} - {self.delivery_status}"
+
+class auto_email_settings(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    auto_send = models.BooleanField(default=False)
+    frequency = models.CharField(default='daily', max_length=10)
+    class Meta:
+        verbose_name_plural = "Low Stock Email Settings"
+    
+    def __str__(self):
+        return f"Low Stock Email: {self.frequency} ({'Enabled' if self.auto_send else 'Disabled'})"
+
+
+class WatchedProduct(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ForeignKey(products, on_delete=models.CASCADE)
+    threshold = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.user.username} watches {self.product.product_name}"
+    
+
+
+
 

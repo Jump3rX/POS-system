@@ -4,14 +4,34 @@ import { useState, useEffect, useContext } from "react";
 import AuthContext from "../context/AuthContext";
 
 function AdminReports() {
+  const getCurrentDate = () => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  };
+
+  const getFirstDayOfMonth = () => {
+    const today = new Date();
+    const firstDay = new Date(
+      Date.UTC(today.getFullYear(), today.getMonth(), 1)
+    );
+    return firstDay.toISOString().split("T")[0];
+  };
+
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({});
   const [topProducts, setTopProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
   const [productCode, setProductCode] = useState("");
-  const [fromDate, setFromDate] = useState(null);
-  const [toDate, setToDate] = useState(null);
-
+  const [fromDate, setFromDate] = useState(getFirstDayOfMonth());
+  const [toDate, setToDate] = useState(getCurrentDate());
+  const [emailSettings, setEmailSettings] = useState({
+    auto_send: false,
+    frequency: "daily",
+  });
+  const [watchedProduct, setWatchedProduct] = useState({
+    product: "",
+    threshold: 0,
+  });
   let { logoutUser, authTokens } = useContext(AuthContext);
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/reports-dashboard", {
@@ -31,7 +51,7 @@ function AdminReports() {
       .then((data) => {
         setData(data);
         setLoading(false);
-        setTopProducts(data.top_products);
+        setTopProducts(data?.top_products);
       });
   }, []);
 
@@ -51,11 +71,34 @@ function AdminReports() {
         }
       })
       .then((data) => {
-        setAllProducts(data);
         console.log(data);
+        setAllProducts(data);
       });
   }, []);
 
+  useEffect(() => {
+    autoEmailSettingFunction();
+  }, []);
+
+  function autoEmailSettingFunction() {
+    fetch("http://127.0.0.1:8000/api/auto-email-settings", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + String(authTokens.access),
+      },
+    })
+      .then((res) => {
+        if (res.status === 200) {
+          return res.json();
+        } else if (res.statusText === "Unauthorized") {
+          logoutUser();
+        }
+      })
+      .then((data) => {
+        setEmailSettings(data);
+      });
+  }
   function downloadInventoryReport(e) {
     e.preventDefault();
     fetch("http://127.0.0.1:8000/api/inventory-report", {
@@ -322,6 +365,78 @@ function AdminReports() {
       });
   }
 
+  function sendEmail() {
+    console.log("working!!");
+    fetch(`http://127.0.0.1:8000/api/send-email`, {
+      headers: {
+        "Authorization": "Bearer " + String(authTokens.access),
+      },
+    })
+      .then((res) => {
+        if (res.status === 200) {
+          return res.json();
+        } else if (res.statusText === "Unauthorized") {
+          logoutUser();
+        }
+      })
+      .then((data) => {
+        //alert(`${data.message}, ${error ? error : ""}`);
+        alert(data.message, data.error || "");
+      });
+  }
+
+  function handleSaveSettings() {
+    fetch("http://127.0.0.1:8000/api/auto-email-settings", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + String(authTokens.access),
+      },
+      body: JSON.stringify(emailSettings),
+    })
+      .then((res) => {
+        if (res.status === 200) {
+          return res.json();
+        } else if (res.statusText === "Unauthorized") {
+          logoutUser();
+        }
+      })
+      .then((data) => {
+        alert(data.message, data.error || "");
+      });
+  }
+
+  function handleSaveWatchedProduct() {
+    console.log(watchedProduct);
+    fetch("http://127.0.0.1:8000/api/watch-product", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + String(authTokens.access),
+      },
+      body: JSON.stringify(watchedProduct),
+    })
+      .then((res) => {
+        if (res.status === 200) {
+          return res.json();
+        } else if (res.statusText === "Unauthorized") {
+          logoutUser();
+        }
+      })
+      .then((data) => {
+        alert(data.message, data.error || "");
+      });
+  }
+
+  function handleSetWatched(code) {
+    const matchedProduct = allProducts.find(
+      (product) => product.product_code === code
+    );
+    setWatchedProduct({
+      ...watchedProduct,
+      product: matchedProduct.id,
+    });
+  }
   return (
     <>
       {loading ? (
@@ -346,7 +461,7 @@ function AdminReports() {
               <p>Monthly Product Sales</p>
             </div>
             <div className="report-card">
-              <h2>{data.employee_data}</h2>
+              <h2>{data?.employee_data || 0}</h2>
               <p>Total Employees</p>
             </div>
           </div>
@@ -363,7 +478,7 @@ function AdminReports() {
                     </tr>
                   </thead>
                   <tbody>
-                    {topProducts.length > 0 ? (
+                    {topProducts?.length > 0 ? (
                       topProducts.map((product) => (
                         <tr key={product.id}>
                           <td>{product.product__product_code}</td>
@@ -406,48 +521,125 @@ function AdminReports() {
               <button onClick={(e) => downloadDailySalesReport(e)}>
                 Daily Sales Report
               </button>
+              <hr />
+              <button onClick={() => sendEmail()}>Send Email</button>
             </div>
           </div>
 
           <div className="custom-download-section">
             <h2>Custom Reports</h2>
             <hr />
-            <div>
-              <h5>Specific Product Sales Report</h5>
-              <input
-                type="text"
-                name="product-code"
-                placeholder="Enter code for specific product"
-                value={productCode}
-                onChange={(e) => setProductCode(e.target.value)}
-                className="single-product-input"
-              />
-              <button onClick={(e) => downloadSingleProductSalesReport(e)}>
-                Download
-              </button>
+            <div className="custom-reports-input-container">
+              <div>
+                <h5>Specific Product Sales Report</h5>
+                <input
+                  type="text"
+                  name="product-code"
+                  placeholder="Enter code for specific product"
+                  value={productCode}
+                  onChange={(e) => setProductCode(e.target.value)}
+                  className="single-product-input"
+                />
+                <button onClick={(e) => downloadSingleProductSalesReport(e)}>
+                  Download
+                </button>
+              </div>
+
+              <div>
+                <h5>View Sales For Specific Time</h5>
+                <label htmlFor="">From:</label>
+                <input
+                  type="date"
+                  name="from-date"
+                  id="from"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                />
+
+                <label htmlFor="to">To:</label>
+                <input
+                  type="date"
+                  name="to-date"
+                  id="to"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                />
+
+                <button onClick={(e) => downloadCustomDateReport(e)}>
+                  Download
+                </button>
+              </div>
             </div>
-            <hr />
-            <div>
-              <h5>View Sales For Specific Time</h5>
-              <label htmlFor="">From:</label>
-              <input
-                type="date"
-                name="from-date"
-                id="from"
-                onChange={(e) => setFromDate(e.target.value)}
-              />
 
-              <label htmlFor="to">To:</label>
-              <input
-                type="date"
-                name="to-date"
-                id="to"
-                onChange={(e) => setToDate(e.target.value)}
-              />
+            <div className="auto-response-container">
+              <div>
+                <h5>Auto Email Settings</h5>
 
-              <button onClick={(e) => downloadCustomDateReport(e)}>
-                Download
-              </button>
+                <small>
+                  Low stock products auto email:{" "}
+                  {emailSettings.auto_send === false ? "DISABLED" : "ENABLED"}
+                </small>
+
+                <br />
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={emailSettings.auto_send}
+                    onChange={(e) =>
+                      setEmailSettings({
+                        ...emailSettings,
+                        auto_send: e.target.checked,
+                      })
+                    }
+                  />
+                  Enable Auto-Send
+                </label>
+                <br />
+                <label htmlFor="frequency">Frequency</label>
+                <select
+                  value={emailSettings.frequency}
+                  onChange={(e) =>
+                    setEmailSettings({
+                      ...emailSettings,
+                      frequency: e.target.value,
+                    })
+                  }
+                  disabled={!emailSettings.auto_send}
+                  id="frequency"
+                >
+                  <option value="off">Off</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                </select>
+                <button onClick={handleSaveSettings}>Save</button>
+              </div>
+
+              <div>
+                <h5>Watch Product</h5>
+                <p>Specific Product Stock Alert</p>
+                <label htmlFor="productCode">Enter Product Code</label>
+                <input
+                  id="productCode"
+                  value={watchedProduct.product.product_code}
+                  onChange={(e) => handleSetWatched(Number(e.target.value))}
+                  required
+                />
+
+                <label htmlFor="alert-level">
+                  (Optional)Alert when stock reaches
+                </label>
+                <input
+                  id="alert-level"
+                  value={watchedProduct.threshold}
+                  onChange={(e) =>
+                    setWatchedProduct({
+                      ...watchedProduct,
+                      threshold: Number(e.target.value),
+                    })
+                  }
+                />
+                <button onClick={handleSaveWatchedProduct}>Add</button>
+              </div>
             </div>
           </div>
         </div>

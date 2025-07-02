@@ -95,13 +95,13 @@ function Home() {
                     <div className="info1">
                       <span className="small-gray">Weekly Product Sales</span>
                       <p className="bold-black">
-                        {data.weekly_product_sales || 0}
+                        {data?.weekly_product_sales || 0}
                       </p>
                     </div>
                     <div className="info2">
                       <span className="small-gray">Monthly Product Sales</span>
                       <p className="bold-black">
-                        {data.monthly_product_sales || "0"}
+                        {data?.monthly_product_sales || "0"}
                       </p>
                     </div>
                   </div>
@@ -133,11 +133,11 @@ function Home() {
                 <h2>Stock Overview</h2>
                 <div className="card-info">
                   <span className="small-gray">Total Stock</span>
-                  <p className="bold-black">{data.stock_data}</p>
+                  <p className="bold-black">{data?.stock_data}</p>
                 </div>
                 <div className="card-info">
                   <span className="small-gray">Available Stock</span>
-                  <p className="bold-black">{data.stock_data}</p>
+                  <p className="bold-black">{data?.stock_data}</p>
                 </div>
                 <div className="card-info">
                   <span className="small-gray">Out of Stock</span>
@@ -161,11 +161,11 @@ function Home() {
                 <h2>Employees Overview</h2>
                 <div className="card-info">
                   <span className="small-gray">Total Employees</span>
-                  <p className="bold-black">{data.employee_data}</p>
+                  <p className="bold-black">{data?.employee_data}</p>
                 </div>
                 <div className="card-info">
                   <span className="small-gray">Active</span>
-                  <p className="bold-black">{data.employee_data}</p>
+                  <p className="bold-black">{data?.employee_data}</p>
                 </div>
                 <div className="card-info">
                   <span className="small-gray">Inactive</span>

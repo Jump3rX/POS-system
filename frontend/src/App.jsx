@@ -14,6 +14,7 @@ import AdminReports from "./pages/AdminReports";
 import CashierProductsPage from "./pages/CashierProductsPage";
 import RestockPage from "./pages/RestockPage";
 import RestockDelivery from "./pages/RestockDelivery";
+import ManageRoles from "./pages/ManageRoles";
 import { Layout } from "./Layout";
 import { AuthProvider } from "./context/AuthContext";
 function App() {
@@ -27,7 +28,7 @@ function App() {
               <Route
                 path="/admin"
                 element={
-                  <PrivateRoute requiredRole="admin">
+                  <PrivateRoute requiredRole="manager">
                     <AdminHome />
                   </PrivateRoute>
                 }
@@ -35,7 +36,7 @@ function App() {
               <Route
                 path="/sales"
                 element={
-                  <PrivateRoute requiredRole="admin">
+                  <PrivateRoute requiredRole="manager">
                     <SalesAdminPage />
                   </PrivateRoute>
                 }
@@ -43,7 +44,7 @@ function App() {
               <Route
                 path="/customers"
                 element={
-                  <PrivateRoute requiredRole="admin">
+                  <PrivateRoute requiredRole="manager">
                     <Customers />
                   </PrivateRoute>
                 }
@@ -51,7 +52,7 @@ function App() {
               <Route
                 path="/products"
                 element={
-                  <PrivateRoute requiredRole="admin">
+                  <PrivateRoute requiredRole="manager">
                     <ProductsPage />
                   </PrivateRoute>
                 }
@@ -60,7 +61,7 @@ function App() {
               <Route
                 path="/restock"
                 element={
-                  <PrivateRoute requiredRole="admin">
+                  <PrivateRoute requiredRole="manager">
                     <RestockPage />
                   </PrivateRoute>
                 }
@@ -68,7 +69,7 @@ function App() {
               <Route
                 path="/restock-delivery"
                 element={
-                  <PrivateRoute requiredRole="admin">
+                  <PrivateRoute requiredRole="manager">
                     <RestockDelivery />
                   </PrivateRoute>
                 }
@@ -76,15 +77,24 @@ function App() {
               <Route
                 path="/employees"
                 element={
-                  <PrivateRoute requiredRole="admin">
+                  <PrivateRoute requiredRole="manager">
                     <Employees />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/roles"
+                element={
+                  <PrivateRoute requiredRole="manager">
+                    <ManageRoles />
                   </PrivateRoute>
                 }
               />
               <Route
                 path="/admin-reports"
                 element={
-                  <PrivateRoute requiredRole="admin">
+                  <PrivateRoute requiredRole="manager">
                     <AdminReports />
                   </PrivateRoute>
                 }
@@ -93,7 +103,7 @@ function App() {
               <Route
                 path="/admin-profile"
                 element={
-                  <PrivateRoute requiredRole="admin">
+                  <PrivateRoute requiredRole="manager">
                     <AdminProfile />
                   </PrivateRoute>
                 }

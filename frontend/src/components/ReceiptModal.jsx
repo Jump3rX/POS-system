@@ -19,39 +19,57 @@ function ReceiptModal({ receipt, closeReceiptModal }) {
   };
 
   const generatePDF = () => {
-    const doc = new jsPDF();
+    // Create jsPDF document with 80mm width (~227 points) and variable height
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: [227, 842], // 80mm width, A4 height as max (adjusted dynamically)
+    });
 
-    // Add company logo or header
-    doc.setFontSize(20);
-    doc.text("SALES RECEIPT", 105, 15, { align: "center" });
+    // Helper function for safe parsing (unchanged)
+    const safeParseFloat = (value) => {
+      return isNaN(parseFloat(value)) ? 0 : parseFloat(value);
+    };
 
-    // Add receipt info - use fallbacks for missing data
+    // Helper function to format date (unchanged)
+    const formatDate = (date) => {
+      return date
+        ? new Date(date).toLocaleDateString("en-KE")
+        : new Date().toLocaleDateString("en-KE");
+    };
+
+    // Add company header (compact)
+    doc.setFontSize(12); // Smaller font for header
+    doc.text("POS Supermarket", 113.5, 20, { align: "center" }); // Centered for 227pt width
+    doc.setFontSize(10);
+    doc.text("SALES RECEIPT", 113.5, 35, { align: "center" });
+
+    // Add receipt info
     const receiptId = receipt.sale_id || `Receipt-${Date.now()}`;
     const seller = receipt.seller || "Cashier";
 
-    doc.setFontSize(12);
-    doc.text(`Receipt #: ${receiptId}`, 14, 30);
-    doc.text(`Date: ${formatDate(receipt.sale_date)}`, 14, 37);
+    doc.setFontSize(8); // Smaller font for details
+    doc.text(`Receipt #: ${receiptId}`, 10, 50);
+    doc.text(`Date: ${formatDate(receipt.sale_date)}`, 10, 60);
+    doc.text(`Served by: ${seller}`, 10, 70);
     doc.text(
-      `Payment Method: ${(receipt.payment_method || "Cash").toUpperCase()}`,
-      14,
-      51
+      `Payment: ${(receipt.payment_method || "Cash").toUpperCase()}`,
+      10,
+      80
     );
 
     // Create items table
     const tableColumn = ["Item", "Qty", "Price", "Subtotal"];
     const tableRows = [];
 
-    // Process items safely with fallbacks
+    // Process items
     (receipt.items || []).forEach((item) => {
-      // Ensure all values are properly parsed as numbers
       const quantity = safeParseFloat(item.quantity);
       const price = safeParseFloat(item.price);
-      // Calculate subtotal here instead of relying on the provided value
       const subtotal = quantity * price;
 
       const itemData = [
-        item.product_name || "Item",
+        (item.product_name || "Item").substring(0, 15), // Truncate for narrow width
         quantity,
         `Ksh ${price.toFixed(2)}`,
         `Ksh ${subtotal.toFixed(2)}`,
@@ -59,34 +77,44 @@ function ReceiptModal({ receipt, closeReceiptModal }) {
       tableRows.push(itemData);
     });
 
-    // Use the imported autoTable function
+    // Add table with compact styling
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: 60,
+      startY: 90,
       theme: "grid",
-      styles: { fontSize: 10 },
-      headStyles: { fillColor: [66, 66, 66] },
+      styles: { fontSize: 7, cellPadding: 2 }, // Smaller font, tighter padding
+      headStyles: { fillColor: [66, 66, 66], fontSize: 7 },
+      columnStyles: {
+        0: { cellWidth: 90 }, // Item name
+        1: { cellWidth: 30 }, // Quantity
+        2: { cellWidth: 50 }, // Price
+        3: { cellWidth: 50 }, // Subtotal
+      },
+      margin: { left: 10, right: 10 }, // Fit within 80mm width
     });
 
-    // Add totals below the table with safe parsing
+    // Add totals
     const finalY = doc.lastAutoTable.finalY + 10;
     const total = safeParseFloat(receipt.total);
     const amountTendered = safeParseFloat(receipt.amount_tendered);
     const change = safeParseFloat(receipt.change);
 
-    doc.text(`Total: Ksh ${total.toFixed(2)}`, 130, finalY);
+    doc.setFontSize(8);
+    doc.text(`Total: Ksh ${total.toFixed(2)}`, 150, finalY, { align: "right" });
     doc.text(
       `Amount Tendered: Ksh ${amountTendered.toFixed(2)}`,
-      130,
-      finalY + 7
+      150,
+      finalY + 10,
+      { align: "right" }
     );
-    doc.text(`Change: Ksh ${change.toFixed(2)}`, 130, finalY + 14);
+    doc.text(`Change: Ksh ${change.toFixed(2)}`, 150, finalY + 20, {
+      align: "right",
+    });
 
     // Add footer
-    doc.setFontSize(10);
-    doc.text(`You were served by: ${seller}`, 14, 44);
-    doc.text("Thank you for your business!", 105, finalY + 30, {
+    doc.setFontSize(7);
+    doc.text("Thank you for shopping with us!", 113.5, finalY + 35, {
       align: "center",
     });
 

@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
       setUser(decodeToken);
       localStorage.setItem("authTokens", JSON.stringify(data));
 
-      if (decodeToken.role === "admin") {
+      if (decodeToken.role === "manager") {
         navigate("/admin");
       } else if (decodeToken.role === "cashier") {
         navigate("/cashier-sales");
