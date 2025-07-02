@@ -189,9 +189,9 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-EMAIL_HOST_USER = 'conradmax5@gmail.com '
+EMAIL_HOST_USER = '__'
 EMAIL_HOST_PASSWORD = 'NICE TRY'
-DEFAULT_FROM_EMAIL = 'conradmax5@gmail.com'
+DEFAULT_FROM_EMAIL = '__'
 
 
 CRON_CLASSES = [
