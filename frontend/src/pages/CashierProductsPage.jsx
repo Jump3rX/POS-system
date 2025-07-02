@@ -34,7 +34,7 @@ function CashierProductsPage({ closeProductModal }) {
                 <th>Code</th>
                 <th>Name</th>
                 <th>Category</th>
-                <th>Price</th>
+                <th>Selling Price</th>
                 <th>Stock</th>
                 <th>Low Stock Level</th>
               </tr>
@@ -45,8 +45,8 @@ function CashierProductsPage({ closeProductModal }) {
                   <td>{p.product_code}</td>
                   <td>{p.product_name}</td>
                   <td>{p.product_category}</td>
-                  <td>{Number(p.product_price).toLocaleString() || "0"}</td>
-                  <td>{p.stock_quantity}</td>
+                  <td>Ksh {Number(p.selling_price).toLocaleString() || "0"}</td>
+                  <td>{p.quantity}</td>
                   <td>{p.low_stock_level}</td>
                 </tr>
               ))}

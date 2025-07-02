@@ -11,9 +11,9 @@ function EmployeeSummaryCards({ empCount }) {
         <p>
           Active: <span>{empCount}</span>
         </p>
-        <p>
+        {/* <p>
           Inactive: <span>2</span>
-        </p>
+        </p> */}
       </div>
     </div>
   );

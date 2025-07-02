@@ -225,6 +225,12 @@ thead {
   padding-bottom: 15px;
   border-radius: 15px;
 }
+.batch-form-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
 .product-form-inputs {
   display: flex;
   flex-direction: column;
@@ -852,4 +858,119 @@ thead {
   width: 300px;
   margin-right: 5px;
 }
+.custom-reports-input-container {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  justify-content: center;
+  align-items: baseline;
+}
 /*============================================*/
+
+/*==================ROLE PAGE STYLING=========*/
+.role-table-container {
+  flex: 1;
+  padding: 20px;
+  background: #ebebeb;
+  border-radius: 8px;
+}
+
+.role-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/*.role-table-container th,
+.role-table-container td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: left;
+}
+
+.role-table-container th {
+  background-color: #007bff;
+  color: white;
+} */
+
+.role-form-container {
+  flex: 1;
+  max-width: 400px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+  background: #f9f9f9;
+}
+
+.role-form-heading {
+  text-align: center;
+}
+
+.role-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.role-label {
+  margin-top: 10px;
+}
+
+.role-input-text {
+  padding: 8px;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.permissions-container {
+  max-height: 300px; /* Set a fixed height; adjust as needed */
+  overflow-y: auto; /* Enable vertical scrolling */
+  border: 1px solid #ccc; /* Optional: adds a border for visibility */
+  padding: 10px; /* Optional: adds some padding */
+}
+
+/* Optional: Style for the permission items
+.permission-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px; /* Space between items 
+}
+
+ Optional: Style for the checkbox and label
+.permission-item input {
+  margin-right: 8px;  between checkbox and label
+} */
+.permissions-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+}
+
+.permission-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.submit-btn {
+  margin-top: 15px;
+  padding: 10px;
+  background: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.submit-btn:hover {
+  background: #0056b3;
+}
+
+/* Layout styling */
+.role-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+}
+
+/*=============================================*/

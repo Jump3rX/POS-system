@@ -29,6 +29,7 @@ function ProductsPage() {
         }
       })
       .then((data) => {
+        console.log(data);
         setProducts(data);
       });
   }
@@ -61,8 +62,8 @@ function ProductsPage() {
     }
   }
 
-  function handleEdit(product) {
-    setProductToEdit(product);
+  function handleEdit(product, latestBatch) {
+    setProductToEdit(product, latestBatch);
     setIsEditModalOpen(true);
   }
   function handleSave(updatedProduct) {

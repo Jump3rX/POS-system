@@ -31,7 +31,7 @@ function RestockPage() {
       })
       .then((data) => {
         setStockData(data);
-        setLowStockProducts(data.low_stock_products);
+        setLowStockProducts(data?.low_stock_products);
       });
   }
   function openRestockModal(product) {
@@ -50,13 +50,13 @@ function RestockPage() {
           <div className="top-section">
             <div className="card">
               <div className="card-body">
-                <p className="bold-black">{stockData.total_stock}</p>
+                <p className="bold-black">{stockData?.total_stock || 0}</p>
                 <p className="small-gray">Total products</p>
               </div>
             </div>
             <div className="card">
               <div className="card-body">
-                <p className="bold-black">{stockData.low_stock}</p>
+                <p className="bold-black">{stockData?.low_stock || 0}</p>
                 <p className="small-gray">Low Stock Products</p>
               </div>
             </div>
@@ -68,7 +68,7 @@ function RestockPage() {
             </div>
             <div className="card">
               <div className="card-body">
-                <p className="bold-black">{stockData.pending_restock}</p>
+                <p className="bold-black">{stockData?.pending_restock || 0}</p>
                 <p className="small-gray">Pending Restock</p>
               </div>
             </div>
@@ -88,15 +88,15 @@ function RestockPage() {
                 </tr>
               </thead>
               <tbody>
-                {lowStockProducts.length > 0 ? (
+                {lowStockProducts?.length > 0 ? (
                   lowStockProducts.map((product) => (
                     <tr key={product.id}>
-                      <td>{product.product_code}</td>
-                      <td>{product.product_name}</td>
-                      <td>{product.product_category}</td>
-                      <td>{product.product_price}</td>
-                      <td>{product.stock_quantity}</td>
-                      <td>{product.low_stock_level}</td>
+                      <td>{product?.product_code}</td>
+                      <td>{product?.product_name}</td>
+                      <td>{product?.product_category}</td>
+                      <td>{product?.product_price}</td>
+                      <td>{product?.stock_quantity}</td>
+                      <td>{product?.low_stock_level}</td>
                       <td>
                         <button onClick={() => openRestockModal(product)}>
                           Restock

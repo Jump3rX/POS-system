@@ -1,34 +1,36 @@
 from django.shortcuts import render
-from django.http import HttpResponse,FileResponse
-from django.contrib.auth.models import User
+from django.http import HttpResponse
+from django.contrib.auth.models import User,Permission
 from django.contrib.auth import authenticate
 from django.utils.timezone import timedelta,now
 from django.utils import timezone
-from django.db.models import Sum,Value,F
+from django.db.models import Sum,Value,F,DateField,ExpressionWrapper, FloatField
 from django.db.models.functions import Concat,TruncDate
-from django.db import models,transaction
+from django.shortcuts import get_object_or_404
+from django.db import models
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+import io
+from django.core.mail import EmailMessage
 
 from rest_framework.decorators import api_view,permission_classes
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import ProductsSerializer, UserSerializer,ProfileSerializer,UserProfileSerializer, addSalesSerializer, addSaleItemsSerializer,adminSalesViewSerializer, productRestockSerializer,restockDeliverySerializer
-from .models import products,Profile,counter_sales,sale_items,restock_orders
+from .serializers import autoEmailSerializer,ProductsSerializer,UserSerializer,ProfileSerializer,RoleSerializer,PermissionSerializer,UserProfileSerializer, addSalesSerializer, addSaleItemsSerializer,adminSalesViewSerializer, productRestockSerializer,restockDeliverySerializer, watchProductSerializer
+from .models import products,Profile,counter_sales,sale_items,restock_orders,Role, auto_email_settings,WatchedProduct
 from rest_framework.permissions import IsAuthenticated
 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .permissions import isAdminRole
+from .permissions import isManagerRole
 
-from reportlab.lib.pagesizes import A4,letter, landscape
+from reportlab.lib.pagesizes import A4, landscape,letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle,SimpleDocTemplate, Paragraph,Spacer
-from reportlab.lib.units import inch
+
 from reportlab.lib.styles import getSampleStyleSheet,ParagraphStyle
-import io
 import pandas as pd
 # Create your views here.
 
@@ -39,7 +41,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         # Add custom claims
         token['username'] = user.username
-        token['role'] = user.profile.role 
+        token['role'] = (user.profile.role.name).lower()
         # ...
 
         return token
@@ -75,107 +77,135 @@ def products_list(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def add_product(request):
-    save_data = ProductsSerializer(data=request.data)
-    if save_data.is_valid():
-        save_data.save()
-
-    return Response(save_data.data)
-
+    product_data = request.data.get('product')
+    print(f"Product Data: {product_data}")
+    if not product_data:
+        return Response({'message': 'Product data required!!'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    product_serializer = ProductsSerializer(data=product_data)
+    if product_serializer.is_valid():
+        product_serializer.save()
+        return Response({'message': 'Product added successfully','product': product_serializer.data}, status=status.HTTP_201_CREATED)
+    else:
+        return Response({'message': f'Invalid product data: {product_serializer.errors}'}, status=status.HTTP_400_BAD_REQUEST)
+    
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, isAdminRole])
+@permission_classes([IsAuthenticated, isManagerRole])
 def bulk_upload(request):
     if 'file' not in request.FILES:
-        print("No file provided in request")
         return Response({'message': "File not found"}, status=status.HTTP_400_BAD_REQUEST)
 
     file = request.FILES['file']
     try:
-        # Read CSV, handle NaN by filling with empty string
-        df = pd.read_csv(file, dtype=str, na_values=['', 'NA', 'N/A'], keep_default_na=False)
+        df = pd.read_csv(file, dtype=str).fillna("-")
         df.columns = df.columns.str.strip()
-        required_columns = {"product_code", "name", "category", "price", "stock_quantity", "low_stock_level"}
+        
+        required_columns = {
+            "product_code", "name", "category", "selling_price",
+            "cost_price", "quantity", "low_stock_level",
+            "expiry_date", "batch_number"
+        }
 
         if not required_columns.issubset(df.columns):
             missing = required_columns - set(df.columns)
-            print(f"Missing required columns: {missing}")
-            return Response({"error": f"CSV file is missing required columns: {missing}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"CSV file is missing required columns: {missing}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         products_added = 0
         products_updated = 0
         skipped_rows = []
 
         for index, row in df.iterrows():
-            product_code = str(row['product_code']).strip()
-            if not product_code or not product_code.isdigit():
-                print(f"Row {index}: Invalid product_code '{product_code}' - skipping")
-                skipped_rows.append(index)
-                continue
-
             try:
-                # Handle price conversion
-                price_str = str(row['price']).replace(',', '').strip()
-                product_price = Decimal(price_str) if price_str else Decimal('0.00')
+                product_code = row['product_code'].strip()
+                if not product_code.isdigit():
+                    raise ValueError("Invalid product_code")
 
-                # Handle stock quantity
-                stock_str = str(row['stock_quantity']).strip()
-                stock_quantity = int(stock_str) if stock_str.isdigit() else 0
+                product_code = int(product_code)
+                name = row['name'].strip() or "-"
+                category = row['category'].strip() or "-"
+                batch_number = row['batch_number'].strip() or None
 
-                # Handle low stock level
-                low_stock_str = str(row['low_stock_level']).strip()
-                low_stock_level = int(low_stock_str) if low_stock_str.isdigit() else 0
+                # Parse prices and quantity safely
+                try:
+                    selling_price = Decimal(str(row['selling_price']).replace(',', '').strip())
+                except:
+                    selling_price = Decimal('0.00')
 
-            except (InvalidOperation, ValueError) as e:
-                print(f"Row {index}: Invalid data format for product_code '{product_code}' - {str(e)}")
-                skipped_rows.append(index)
-                continue
+                try:
+                    cost_price = Decimal(str(row['cost_price']).replace(',', '').strip())
+                except:
+                    cost_price = Decimal('0.00')
 
-            try:
+                try:
+                    quantity = int(row['quantity']) if row['quantity'].isdigit() else 0
+                except:
+                    quantity = 0
+
+                try:
+                    low_stock_level = int(row['low_stock_level']) if row['low_stock_level'].isdigit() else 0
+                except:
+                    low_stock_level = 0
+
+                # Parse expiry date
+                expiry_date = None
+                expiry_str = row.get('expiry_date', '').strip()
+                if expiry_str and expiry_str != "-" and expiry_str.lower() != 'nan':
+                    try:
+                        expiry_date = datetime.strptime(expiry_str, '%Y-%m-%d').date()
+                    except ValueError:
+                        expiry_date = None  # fallback
+
+                # Create or update product
                 product, created = products.objects.update_or_create(
                     product_code=product_code,
                     defaults={
-                        'product_name': str(row['name']).strip(),
-                        'product_category': str(row['category']).strip(),
-                        'product_price': product_price,
-                        'stock_quantity': stock_quantity,
+                        'product_name': name,
+                        'product_category': category,
+                        'selling_price': selling_price,
+                        'cost_price': cost_price,
+                        'quantity': quantity,
                         'low_stock_level': low_stock_level,
+                        'expiry_date': expiry_date,
+                        'batch_number': batch_number
                     }
                 )
                 if created:
                     products_added += 1
-                    print(f"Added new product: {product_code}")
                 else:
                     products_updated += 1
-                    print(f"Updated product: {product_code}")
+
             except Exception as e:
-                print(f"Row {index}: Failed to save product_code '{product_code}' - {str(e)}")
+                print(f"Row {index}: Skipped due to error: {e}")
                 skipped_rows.append(index)
                 continue
 
-        response_data = {
+        return Response({
             "message": f"Successfully added {products_added} new products, updated {products_updated} products.",
-            "skipped_rows": skipped_rows if skipped_rows else "None",
-        }
-        return Response(response_data, status=status.HTTP_201_CREATED)
+            "skipped_rows": skipped_rows or "None"
+        }, status=status.HTTP_201_CREATED)
 
     except Exception as e:
-        print(f"Failed to process CSV file: {str(e)}")
         return Response({"error": f"Failed to process CSV file: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def stock_data(request):
     total = products.objects.all().count()
-    low_stock = products.objects.filter(stock_quantity__lte=models.F('low_stock_level')).count()
+    low_stock = products.objects.filter(quantity__lte=models.F('low_stock_level')).count()
     low_stock_products = products.objects.filter(
-        stock_quantity__lte=F('low_stock_level')
+        quantity__lte=F('low_stock_level')
     ).exclude(
         id__in=restock_orders.objects.filter(status='pending').values_list('product_id', flat=True)
     )
 
-    pending_restock = products.objects.filter(stock_quantity__lte=models.F('low_stock_level')).count()
+    pending_restock = products.objects.filter(quantity__lte=models.F('low_stock_level')).count()
     serialized_products = ProductsSerializer(low_stock_products,many=True).data
 
     data = {
@@ -192,7 +222,6 @@ def stock_data(request):
 @permission_classes([IsAuthenticated])
 def product_restock(request):
     if request.method == 'POST':
-
         try:
             product_instance = products.objects.get(id = request.data.get('product_id'))
         except product_instance.DoesNotExist:
@@ -247,7 +276,7 @@ def confirm_delivery(request):
             if restock_order.quantity == int(request.data.get("quantity_delivered")):
                 restock_order.status = "delivered"
                 restock_order.save()
-            product.stock_quantity += new_stock
+            product.quantity += new_stock
             product.save() 
             return Response({"message": "Delivery confirmed", "data": serializer.data}, status=status.HTTP_200_OK)
         else:
@@ -295,7 +324,7 @@ def multi_confirm(request):
                         restock_order.save()
 
                     # Update product stock
-                    product.stock_quantity += quantity_delivered
+                    product.quantity += quantity_delivered
                     product.save()
 
                     # Add to results
@@ -321,8 +350,8 @@ def multi_confirm(request):
         )
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated,isAdminRole])
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated,isManagerRole])
 def edit_product(request,id):
     product = products.objects.get(id=id)
     product_data = ProductsSerializer(instance=product,data=request.data)
@@ -331,16 +360,16 @@ def edit_product(request,id):
     return Response(product_data.data)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def delete_product(request,id):
     product = products.objects.get(id=id)
     product.delete()
 
     return Response('Product Deleted!')
 
-
+###############USER, ROLES & PERMISSIONS MANAGEMENT###############
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def create_user(request):
     user_data = {
         'username':request.data.get('username'),
@@ -348,9 +377,11 @@ def create_user(request):
         'last_name':request.data.get('last_name'),
         'password':request.data.get('password'),
     }
+    role_id = request.data.get('role')
+    role = get_object_or_404(Role, id=role_id) if role_id else None
     profile_data = {
         'phone':request.data.get('phone'),
-        'role':request.data.get('role').lower()
+        'role':role
     }
     user_serializer = UserSerializer(data=user_data)
     if user_serializer.is_valid():
@@ -369,7 +400,7 @@ def create_user(request):
                 "last_name": user.last_name,
                 "profile": {
                     "phone":user.profile.phone,
-                    "role": user.profile.role
+                    "role": user.profile.role.name
                 }
             },status=status.HTTP_201_CREATED)
         else:
@@ -380,7 +411,7 @@ def create_user(request):
         
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def deactivate_user(request,id):
     user = User.objects.get(id=id)
     user.is_active = False
@@ -388,15 +419,15 @@ def deactivate_user(request,id):
     return Response(status=status.HTTP_200_OK)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def employees(request):
     excluded = ['root','customer']
-    employees = User.objects.exclude(profile__role__in = excluded).exclude(is_superuser=True).exclude(is_active=False)
+    employees = User.objects.exclude(is_superuser=True).exclude(is_active=False)
     serializer = UserProfileSerializer(employees,many=True)
     return Response(serializer.data)
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def edit_employee(request,id):
     try:
         user = User.objects.get(id=id)
@@ -444,6 +475,57 @@ def edit_employee(request,id):
     
     return Response(response_data,status=status.HTTP_200_OK)
 
+@api_view(['GET','POST'])
+@permission_classes([IsAuthenticated, isManagerRole])
+def manage_roles(request):
+    if request.method == 'GET':
+        roles = Role.objects.all()
+        serializer = RoleSerializer(roles, many=True)
+        return Response(serializer.data)
+    
+    elif request.method == 'POST':
+        serializer = RoleSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_permissions(request):
+    app_label = "api"
+    permissions = Permission.objects.filter(content_type__app_label=app_label)
+    serializer = PermissionSerializer(permissions, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated, isManagerRole])
+def edit_role(request, id):
+    try:
+        role = Role.objects.get(id=id)
+        serialier = RoleSerializer(instance=role, data=request.data)
+        if serialier.is_valid():
+            serialier.save()
+            return Response({'message':'Role Edited Successfully!'}, status=status.HTTP_200_OK)
+        else:
+            return Response({f'message':{serialier.errors}}, status=status.HTTP_400_BAD_REQUEST)
+    except role.DoesNotExist:
+        return Response({'message':'Role not found!'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated, isManagerRole])
+def delete_role(request, id):
+    try:
+        role = Role.objects.get(id=id)
+        role.delete()
+        return Response({'message':'Role Deleted!'},status=status.HTTP_200_OK)
+    except role.DoesNotExist:
+        return Response({'message':"Role doesnot exist!"},status=status.HTTP_404_NOT_FOUND)
+    
+#######################################################################################################
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -474,7 +556,7 @@ def add_sale(request):
             else:
                 return Response({'message':f'{item_serializer.errors}'},status=status.HTTP_400_BAD_REQUEST)
             product = products.objects.get(id = item.get('product'))
-            product.stock_quantity -= item.get('quantity')
+            product.quantity -= item.get('quantity')
             product.save()
             sales_item_list.append({
                 'product_code': product.product_code,
@@ -502,14 +584,14 @@ def add_sale(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def all_sales(request):
     sales = counter_sales.objects.all().order_by('-sale_date')
     serializer = adminSalesViewSerializer(sales,many=True)
     return Response(serializer.data)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def chart_data(request):
     last_7_days = now().date() - timedelta(days=7)
     daily_sales = (
@@ -525,14 +607,14 @@ def chart_data(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def dashboard_data(request):
     seven_days = timezone.now() - timedelta(days=7)
     monthly_days = timezone.now().replace(day = 1)
-    excluded = ['root','customer']
+    excluded = ['customer']
 
     stock_data = products.objects.all().count()
-    employee_data = User.objects.exclude(profile__role__in = excluded).exclude(is_superuser=True).exclude(is_active=False).count()
+    employee_data = User.objects.exclude(is_superuser=True).exclude(is_active=False).count()
     weekly_sales = counter_sales.objects.filter(sale_date__gte=seven_days).aggregate(total=Sum('total'))['total']
     monthly_sales = counter_sales.objects.filter(sale_date__gte=monthly_days).aggregate(total=Sum('total'))['total']
 
@@ -551,14 +633,14 @@ def dashboard_data(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def reports_dashboard(request):
     seven_days = timezone.now() - timedelta(days=7)
     monthly_days = timezone.now().replace(day = 1)
     excluded = ['root','customer']
 
     stock_data = products.objects.all().count()
-    employee_data = User.objects.exclude(profile__role__in = excluded).exclude(is_superuser=True).exclude(is_active=False).count()
+    employee_data = User.objects.exclude(is_superuser=True).exclude(is_active=False).count()
     weekly_sales = counter_sales.objects.filter(sale_date__gte=seven_days).aggregate(total=Sum('total'))['total']
     monthly_sales = counter_sales.objects.filter(sale_date__gte=monthly_days).aggregate(total=Sum('total'))['total']
 
@@ -584,7 +666,7 @@ def reports_dashboard(request):
     }
     return Response(dash_data,status=status.HTTP_200_OK)
 
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def inventory_report(request):
     reponse  = HttpResponse(content_type='application/pdf')
     reponse['Content-Disposition'] = 'attachment; filename="Inventory_Report.pdf"'
@@ -593,7 +675,7 @@ def inventory_report(request):
 
     pdf.setFont("Helvetica-Bold",16)
     pdf.drawString(200,height-50,'Inventory Report')
-    all_products = products.objects.all().values_list('product_code', 'product_name', 'product_price', 'stock_quantity')
+    all_products = products.objects.all().values_list('product_code', 'product_name', 'unit_price', 'quantity')
 
     data = [["Code","Product Name","Price","Quantity"]]
     for product in all_products:
@@ -617,7 +699,7 @@ def inventory_report(request):
 
     return reponse
 
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def low_stock_products_report(request):
     reponse  = HttpResponse(content_type='application/pdf')
     reponse['Content-Disposition'] = 'attachment; filename="Low Stock Products.pdf"'
@@ -626,7 +708,7 @@ def low_stock_products_report(request):
 
     pdf.setFont("Helvetica-Bold",16)
     pdf.drawString(200,height-50,'Low Stock Products')
-    all_products = products.objects.filter(stock_quantity__lte=models.F('low_stock_level')).values_list('product_code', 'product_name', 'product_price', 'stock_quantity','low_stock_level')
+    all_products = products.objects.filter(quantity__lte=models.F('low_stock_level')).values_list('product_code', 'product_name', 'unit_price', 'quantity','low_stock_level')
 
     data = [["Code","Product Name","Price","Quantity","Low Stock Alert"]]
     for product in all_products:
@@ -652,7 +734,7 @@ def low_stock_products_report(request):
 
 
 
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def sales_report(request):
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="Sales_Report.pdf"'
@@ -709,20 +791,20 @@ def sales_report(request):
     return response
 
 
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated])
 def monthly_sales_report(request):
     thirty_days = timezone.now() - timedelta(days=30)
-    reponse  = HttpResponse(content_type='application/pdf')
-    reponse['Content-Disposition'] = 'attachment; filename="Monthly Sales Report.pdf"'
-    doc = SimpleDocTemplate(reponse, pagesize=landscape(A4), topMargin=50, bottomMargin=50, leftMargin=30, rightMargin=30)
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="Monthly Sales Report.pdf"'
+    doc = SimpleDocTemplate(response, pagesize=landscape(A4), topMargin=50, bottomMargin=50, leftMargin=30, rightMargin=30)
     elements = []
 
-    # Title
     styles = getSampleStyleSheet()
     title = Paragraph("Monthly Sales Report", styles['Title'])
     elements.append(title)
-    elements.append(Spacer(1, 20))  # Add space below title
-    # Calculate total sales amount and total products sold
+    elements.append(Spacer(1, 20))
+
+    # Summary of total sales and products sold
     sales_in_period = counter_sales.objects.filter(sale_date__gte=thirty_days)
     total_sales_amount = sales_in_period.aggregate(Sum('total'))['total__sum'] or 0
     total_products_sold = sale_items.objects.filter(sale__sale_date__gte=thirty_days).count()
@@ -730,19 +812,19 @@ def monthly_sales_report(request):
     summary_style = ParagraphStyle(
         name='Summary',
         parent=styles['Normal'],
-        fontSize=14,  # Increase font size (default is 10)
-        leading=16,   # Adjust leading (line spacing) to match larger font
+        fontSize=14,
+        leading=16,
     )
 
-    # Add summary paragraph
     summary_text = (
         f"This month, total sales amount to <b>Ksh {total_sales_amount:,.2f}</b> "
         f"and total products sold are <b>{total_products_sold}</b>."
     )
     summary = Paragraph(summary_text, summary_style)
     elements.append(summary)
-    elements.append(Spacer(1, 20))  # Space below summary
+    elements.append(Spacer(1, 20))
 
+    # Main table: Individual sale items
     all_sales = sale_items.objects.filter(
         sale__sale_date__gte=thirty_days
     ).values_list(
@@ -757,7 +839,6 @@ def monthly_sales_report(request):
         flat=False
     )
 
-
     data = [["Product Code", "Product Name", "Seller", "Total", "Payment Method", "Sale Date", "Amount Tendered", "Change"]]
     for sale_item in all_sales:
         product_code, product_name, seller, total, payment_method, sale_date, amount_tendered, change = sale_item
@@ -767,120 +848,242 @@ def monthly_sales_report(request):
             seller,
             str(total),
             payment_method,
-            sale_date.strftime('%Y-%m-%d %H:%M:%S'),  # Format datetime
+            sale_date.strftime('%Y-%m-%d %H:%M:%S'),
             str(amount_tendered) if amount_tendered is not None else "N/A",
             str(change) if change is not None else "N/A",
         ])
 
-    
-    
-    table = Table(data, colWidths=[80, 180, 50, 80, 120, 100, 100, 50])  
+    table = Table(data, colWidths=[80, 180, 50, 80, 120, 100, 100, 50])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10), 
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  
-        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),  
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),
     ]))
 
-
     elements.append(table)
+    elements.append(Spacer(1, 30))  
+
+    # Second table: Daily sales totals for the month
+    daily_sales = (
+        counter_sales.objects.filter(sale_date__gte=thirty_days)
+        .annotate(day=TruncDate('sale_date', output_field=DateField()))
+        .values('day')
+        .annotate(daily_total=Sum('total'))
+        .order_by('day')
+    )
+
+    daily_data = [["Day", "Total Sales Amount"]]
+    for entry in daily_sales:
+        day = entry['day']
+        daily_total = entry['daily_total']
+        daily_data.append([
+            day.strftime('%Y-%m-%d'),
+            f"Ksh {daily_total:,.2f}",
+        ])
+
+    if not daily_sales:
+        daily_data.append(["No sales", "Ksh 0.00"])
+
+    daily_table = Table(daily_data, colWidths=[150, 150])
+    daily_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.lightblue),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+
+    daily_title = Paragraph("Daily Sales Totals for the Month", styles['Heading2'])
+    elements.append(daily_title)
+    elements.append(Spacer(1, 10))
+    elements.append(daily_table)
+
+    # Sales Profit Analysis
+    profit_title = Paragraph("Sales Profit Analysis", styles['Heading2'])
+    elements.append(profit_title)
+    elements.append(Spacer(1, 10))
+
+    profit_data = [["Product Code", "Product Name", "Total Revenue", "Total Cost", "Total Profit"]]
+
+    sales_profit = (
+        sale_items.objects.filter(sale__sale_date__gte=thirty_days)
+        .values('product__product_code', 'product__product_name')
+        .annotate(
+            total_revenue=Sum('sale__total'),
+            total_cost=Sum(F('quantity') * F('product__cost_price')),
+            total_profit=Sum(F('sale__total') - (F('quantity') * F('product__cost_price')))
+        )
+    )
+
+    for item in sales_profit:
+        product_code = item['product__product_code']
+        product_name = item['product__product_name']
+        total_revenue = item['total_revenue'] or 0
+        total_cost = item['total_cost'] or 0
+        total_profit = item['total_profit'] or 0
+
+        profit_data.append([
+            product_code,
+            product_name,
+            f"Ksh {total_revenue:,.2f}",
+            f"Ksh {total_cost:,.2f}",
+            f"Ksh {total_profit:,.2f}"
+        ])
+
+    profit_table = Table(profit_data, colWidths=[100, 180, 120, 120, 120])
+    profit_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.lightgreen),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+
+    elements.append(profit_table)
+
+    total_profit_earned = sales_profit.aggregate(total=Sum('total_profit'))['total'] or 0
+
+    profit_summary_text = (
+        f"<b>Total profit earned this month:</b> Ksh {total_profit_earned:,.2f}"
+    )
+    profit_summary = Paragraph(profit_summary_text, summary_style)
+    elements.append(Spacer(1, 10))
+    elements.append(profit_summary)
+
+    # Build the PDF
     doc.build(elements)
+    return response
 
-    return reponse
 
-@permission_classes([IsAuthenticated,isAdminRole])
+
+@permission_classes([IsAuthenticated, isManagerRole])
 def weekly_sales_report(request):
     seven_days = timezone.now() - timedelta(days=7)
-    reponse  = HttpResponse(content_type='application/pdf')
-    reponse['Content-Disposition'] = 'attachment; filename="Weekly Sales Report.pdf"'
-    doc = SimpleDocTemplate(reponse, pagesize=landscape(A4), topMargin=50, bottomMargin=50, leftMargin=30, rightMargin=30)
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="Weekly Sales Report.pdf"'
+    doc = SimpleDocTemplate(response, pagesize=landscape(A4), topMargin=50, bottomMargin=50, leftMargin=30, rightMargin=30)
     elements = []
-
-    # Title
     styles = getSampleStyleSheet()
+    
     title = Paragraph("Weekly Sales Report", styles['Title'])
     elements.append(title)
-    elements.append(Spacer(1, 20))  
+    elements.append(Spacer(1, 20))
     
     sales_in_period = counter_sales.objects.filter(sale_date__gte=seven_days)
     total_sales_amount = sales_in_period.aggregate(Sum('total'))['total__sum'] or 0
     total_products_sold = sale_items.objects.filter(sale__sale_date__gte=seven_days).count()
-
-    summary_style = ParagraphStyle(
-        name='Summary',
-        parent=styles['Normal'],
-        fontSize=14,  
-        leading=16,   
-    )
-
     
+    summary_style = ParagraphStyle(name='Summary', parent=styles['Normal'], fontSize=14, leading=16)
     summary_text = (
         f"This week, total sales amount to <b>Ksh {total_sales_amount:,.2f}</b> "
         f"and total products sold are <b>{total_products_sold}</b>."
     )
     summary = Paragraph(summary_text, summary_style)
     elements.append(summary)
-    elements.append(Spacer(1, 20))  
-
-    all_sales = sale_items.objects.filter(
-        sale__sale_date__gte=seven_days
-    ).values_list(
-        'product__product_code',
-        'product__product_name',
-        'sale__seller_id__username',
-        'sale__total',
-        'sale__payment_method',
-        'sale__sale_date',
-        'sale__amount_tendered',
-        'sale__change',
-        flat=False
-    )
-
-
+    elements.append(Spacer(1, 20))
+    
+    all_sales = sale_items.objects.filter(sale__sale_date__gte=seven_days)
     data = [["Product Code", "Product Name", "Seller", "Total", "Payment Method", "Sale Date", "Amount Tendered", "Change"]]
     for sale_item in all_sales:
-        product_code, product_name, seller, total, payment_method, sale_date, amount_tendered, change = sale_item
         data.append([
-            product_code,
-            product_name,
-            seller,
-            str(total),
-            payment_method,
-            sale_date.strftime('%Y-%m-%d %H:%M:%S'),  
-            str(amount_tendered) if amount_tendered is not None else "N/A",
-            str(change) if change is not None else "N/A",
+            sale_item.product.product_code,
+            sale_item.product.product_name,
+            sale_item.sale.seller_id.username,
+            f"Ksh {sale_item.sale.total:,.2f}",
+            sale_item.sale.payment_method,
+            sale_item.sale.sale_date.strftime('%Y-%m-%d %H:%M:%S'),
+            f"Ksh {sale_item.sale.amount_tendered:,.2f}" if sale_item.sale.amount_tendered else "N/A",
+            f"Ksh {sale_item.sale.change:,.2f}" if sale_item.sale.change else "N/A",
         ])
-
-    
-    
-    table = Table(data, colWidths=[80, 180, 50, 80, 120, 100, 100, 50])  
+    table = Table(data, colWidths=[80, 180, 50, 80, 120, 100, 100, 50])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),  
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), 
-        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),  
     ]))
-
-
     elements.append(table)
+    elements.append(Spacer(1, 30))
+    
+    daily_sales = counter_sales.objects.filter(sale_date__gte=seven_days).annotate(day=TruncDate('sale_date', output_field=DateField())).values('day').annotate(daily_total=Sum('total')).order_by('day')
+    daily_data = [["Day", "Total Sales Amount"]]
+    for entry in daily_sales:
+        daily_data.append([entry['day'].strftime('%Y-%m-%d'), f"Ksh {entry['daily_total']:,.2f}"])
+    if not daily_sales:
+        daily_data.append(["No sales", "Ksh 0.00"])
+    daily_table = Table(daily_data, colWidths=[150, 150])
+    daily_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.lightblue),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(Paragraph("Daily Sales Totals for the Week", styles['Heading2']))
+    elements.append(Spacer(1, 10))
+    elements.append(daily_table)
+    elements.append(Spacer(1, 30))
+    
+    # Sales Profit Analysis
+    profit_data = [["Product Name", "Total Sales", "Total Cost", "Profit"]]
+    total_profit = 0
+    
+    profit_query = sale_items.objects.filter(sale__sale_date__gte=seven_days).values('product__product_name').annotate(
+        total_sales=Sum(F('quantity') * F('price')),
+        total_cost=Sum(F('quantity') * F('product__cost_price'))
+    )
+    
+    for entry in profit_query:
+        profit = entry['total_sales'] - entry['total_cost']
+        total_profit += profit
+        profit_data.append([
+            entry['product__product_name'],
+            f"Ksh {entry['total_sales']:,.2f}",
+            f"Ksh {entry['total_cost']:,.2f}",
+            f"Ksh {profit:,.2f}",
+        ])
+    
+    elements.append(Paragraph("Sales Profit Analysis", styles['Heading2']))
+    elements.append(Spacer(1, 10))
+    profit_table = Table(profit_data, colWidths=[200, 150, 150, 150])
+    profit_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(profit_table)
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph(f"Total Profit for the Week: <b>Ksh {total_profit:,.2f}</b>", summary_style))
+    
     doc.build(elements)
+    return response
 
-    return reponse
 
 
-@permission_classes([IsAuthenticated,isAdminRole])
+@permission_classes([IsAuthenticated,isManagerRole])
 def daily_sales_report(request):
     one_day = timezone.now() - timedelta(days=1)
     reponse  = HttpResponse(content_type='application/pdf')
@@ -960,6 +1163,7 @@ def daily_sales_report(request):
     doc.build(elements)
 
     return reponse
+
 
 @permission_classes([IsAuthenticated])
 def single_product_report(request):
@@ -1047,24 +1251,22 @@ def single_product_report(request):
     return reponse
     
 
-@permission_classes([IsAuthenticated,isAdminRole])
+
+
+@permission_classes([IsAuthenticated,isManagerRole])
 def custom_dates_report(request):
-    
     from_date_str = request.GET.get('from')
     to_date_str = request.GET.get('to')
 
-    
     if not from_date_str or not to_date_str:
         return Response(
             {"error": "Both 'from' and 'to' dates are required"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Parse the dates
     try:
         from_date = datetime.strptime(from_date_str, '%Y-%m-%d')
         to_date = datetime.strptime(to_date_str, '%Y-%m-%d')
-        # Ensure to_date is inclusive by adding one day and setting time to 23:59:59
         to_date = to_date.replace(hour=23, minute=59, second=59)
     except ValueError:
         return Response(
@@ -1072,18 +1274,15 @@ def custom_dates_report(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Validate that from_date is not after to_date
     if from_date > to_date:
         return Response(
             {"error": "'from' date must be before or equal to 'to' date"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Convert to timezone-aware datetime if needed
     from_date = timezone.make_aware(from_date)
     to_date = timezone.make_aware(to_date)
 
-    # Initialize the PDF response
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="sales_report_{from_date_str}_to_{to_date_str}.pdf"'
     doc = SimpleDocTemplate(response, pagesize=landscape(A4), topMargin=50, bottomMargin=50, leftMargin=30, rightMargin=30)
@@ -1094,7 +1293,6 @@ def custom_dates_report(request):
     elements.append(title)
     elements.append(Spacer(1, 20))
 
-    # Filter sales within the date range
     sales_in_period = counter_sales.objects.filter(
         sale_date__gte=from_date,
         sale_date__lte=to_date
@@ -1120,7 +1318,6 @@ def custom_dates_report(request):
     elements.append(summary)
     elements.append(Spacer(1, 20))
 
-    # Fetch sales data within the date range
     all_sales = sale_items.objects.filter(
         sale__sale_date__gte=from_date,
         sale__sale_date__lte=to_date
@@ -1136,7 +1333,6 @@ def custom_dates_report(request):
         flat=False
     )
 
-    # Check if there are any sales in the date range
     if not all_sales:
         summary_text = f"No sales found between {from_date_str} and {to_date_str}."
         summary = Paragraph(summary_text, summary_style)
@@ -1144,7 +1340,6 @@ def custom_dates_report(request):
         doc.build(elements)
         return response
 
-    # Prepare table data
     data = [["Product Code", "Product Name", "Seller", "Total", "Payment Method", "Sale Date", "Amount Tendered", "Change"]]
     for sale_item in all_sales:
         product_code, product_name, seller, total, payment_method, sale_date, amount_tendered, change = sale_item
@@ -1159,7 +1354,6 @@ def custom_dates_report(request):
             str(change) if change is not None else "N/A",
         ])
 
-    # Create and style the table
     table = Table(data, colWidths=[80, 180, 50, 80, 120, 100, 100, 50])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
@@ -1175,9 +1369,42 @@ def custom_dates_report(request):
     ]))
 
     elements.append(table)
-    doc.build(elements)
+    elements.append(Spacer(1, 30))
 
+    # Profit Analysis Table
+
+    profit_table_title = Paragraph(f"Profit Report from {from_date_str} to {to_date_str}", styles['Title'])
+    elements.append(profit_table_title)
+    elements.append(Spacer(1, 20))
+    profit_data = [["Product Code", "Product Name", "Quantity Sold", "Selling Price", "Cost Price", "Profit"]]
+    total_profit = 0
+    for item in sale_items.objects.filter(sale__sale_date__gte=from_date, sale__sale_date__lte=to_date):
+        profit = (item.price - item.product.cost_price) * item.quantity
+        total_profit += profit
+        profit_data.append([
+            item.product.product_code,
+            item.product.product_name,
+            str(item.quantity),
+            f"Ksh {item.price:,.2f}",
+            f"Ksh {item.product.cost_price:,.2f}",
+            f"Ksh {profit:,.2f}",
+        ])
+
+    profit_table = Table(profit_data, colWidths=[80, 130, 80, 100, 100, 100])
+    profit_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    
+    elements.append(profit_table)
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph(f"<b>Total Profit Earned: Ksh {total_profit:,.2f}</b>", styles['Normal']))
+    
+    doc.build(elements)
     return response
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1188,7 +1415,7 @@ def admin_confirm(request):
     if username!= "" and password!="":
         is_authenticated = authenticate(request, username=username,password=password)
         if is_authenticated is not None:
-            if is_authenticated.profile.role == 'admin':
+            if is_authenticated.profile.role.name == 'manager':
                 return Response({'message':'authorized'},status=status.HTTP_200_OK)
             else:
                 return Response({'message':'not authorized'},status=status.HTTP_403_FORBIDDEN)
@@ -1199,9 +1426,136 @@ def admin_confirm(request):
     
 
 
+@api_view(['GET'])
+def send_low_stock_email(request):
+    now = datetime.now()
+    try:
+        # Get user's email preference
+        # pref = EmailPreference.objects.get(user=user)
+        # if not pref.is_active:
+        #     print(f"Email notifications disabled for {user.username}")
+        #     return
+
+        # Get low stock items
+        low_stock_items = products.objects.filter(
+            quantity__lte=models.F('low_stock_level')
+        )
+        
+        if not low_stock_items.exists():
+            print("No low stock items to report")
+            return Response({'message': 'No low stock items to report'}, status=status.HTTP_200_OK)
+            return
+
+        # Generate PDF
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        
+        styles = getSampleStyleSheet()
+
+        title_text = f'Current Low Stock Products on {now.strftime("%Y-%m-%d")}'
+        title = Paragraph(title_text, styles['Title'])
+        elements.append(title)
+        elements.append(Spacer(1, 20))
+
+        data = [['Product Code','Product Name', 'Current Quantity', 'Low Stock Level']]
+        for item in low_stock_items:
+            data.append([item.product_code,item.product_name, item.quantity, item.low_stock_level])
+        
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        elements.append(table)
+        doc.build(elements)
+        buffer.seek(0)
+
+        # Prepare email
+        subject = f'Low Stock Report - {datetime.now().strftime("%Y-%m-%d")}'
+        message = 'Please find attached the low stock report.'
+        from_email = 'conradmax5@gmail.com'  # Should match your settings.py
+        recipient_list = ['njoraconrad@gmail.com']
+
+        # Send email
+        email = EmailMessage(
+            subject,
+            message,
+            from_email,
+            recipient_list,
+        )
+        email.attach(
+            f'low_stock_report_{datetime.now().strftime("%Y%m%d")}.pdf',
+            buffer.getvalue(),
+            'application/pdf'
+        )
+        email.send()
+
+        print('Email sent!')
+        return Response({'message': 'Email sent!'}, status=status.HTTP_200_OK)
+
+    # except EmailPreference.DoesNotExist:
+    #     print(f"No email preference set for user {user.username}")
+    except Exception as e:
+        print('Email not sent!',e)
+        return Response({'message': 'Email not sent!', 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 
 
 
+@api_view(['GET','PUT'])
+@permission_classes([IsAuthenticated, isManagerRole])
+def auto_send_settings(request):
+    settings, created = auto_email_settings.objects.get_or_create(user=request.user,defaults={'auto_send': False, 'frequency': 'daily'})
 
+    if request.method == 'GET':
+        settings_data = autoEmailSerializer(settings)
+        return Response(settings_data.data,status=status.HTTP_200_OK)
+    
+    elif request.method == 'PUT':
+        try:
+            serializer = autoEmailSerializer(instance=settings, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({'message': 'Settings updated'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'message': 'Check Settings and try again!','errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'message': 'Error updating settings', 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response({'message': 'Invalid method!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET','POST'])
+@permission_classes([IsAuthenticated, isManagerRole])
+def set_watch_product(request):
+    if request.method == 'GET':
+        watched_products = WatchedProduct.objects.filter(user=request.user)
+        serializer = watchProductSerializer(watched_products,many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
+        item_data = {
+            'user':request.user.id,
+            'product':int(request.data.get('product')),
+            'threshold':int(request.data.get('threshold'))
+        }
+        watched_product_data = watchProductSerializer(data = item_data)
+        if watched_product_data.is_valid():
+            watched_product_data.save()
+            print("SAVED")
+            return Response({'message': 'Product saved!'}, status=status.HTTP_200_OK)
+        else:
+            print(watched_product_data.errors)
+            return Response({'message': 'check detailes and try again!','error':str(watched_product_data.errors)}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        print("BAD METHOD!!")
+        return Response({'message': 'Bad request!'}, status=status.HTTP_400_BAD_REQUEST)
+        

@@ -55,7 +55,7 @@ function CashierSales() {
 
   useEffect(() => {
     let saleTotal = cart
-      .reduce((acc, item) => acc + item.product_price * item.quantity, 0)
+      .reduce((acc, item) => acc + item.selling_price * item.quantity, 0)
       .toFixed(2);
     setTotal(saleTotal);
   }, [cart]);
@@ -97,7 +97,7 @@ function CashierSales() {
               return {
                 ...item,
                 quantity: newQuantity,
-                subtotal: (item.product_price * newQuantity).toFixed(2),
+                subtotal: (item.selling_price * newQuantity).toFixed(2),
               };
             }
             return item;
@@ -182,7 +182,7 @@ function CashierSales() {
             ? {
                 ...item,
                 quantity: item.quantity + 1,
-                subtotal: (item.product_price * (item.quantity + 1)).toFixed(2),
+                subtotal: (item.selling_price * (item.quantity + 1)).toFixed(2),
               }
             : item
         )
@@ -193,7 +193,7 @@ function CashierSales() {
         {
           ...product,
           quantity: 1,
-          subtotal: Number(product.product_price).toFixed(2),
+          subtotal: Number(product.selling_price).toFixed(2),
         },
       ]);
     }
@@ -266,7 +266,7 @@ function CashierSales() {
       items: cart.map((item) => ({
         product: item.id,
         quantity: item.quantity,
-        price: item.product_price,
+        price: item.selling_price,
       })),
       amount_tendered: tendered,
       change_due: change,
@@ -428,7 +428,7 @@ function CashierSales() {
                     <tr key={item.id}>
                       <td>{item.product_code}</td>
                       <td>{item.product_name}</td>
-                      <td>{item.product_price}</td>
+                      <td>{item.selling_price}</td>
                       <td>
                         <button
                           onClick={() =>

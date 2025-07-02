@@ -7,9 +7,12 @@ function AddProductForm({ handleAddNewProduct }) {
     product_code: "",
     product_name: "",
     product_category: "",
-    product_price: "",
-    stock_quantity: "",
+    selling_price: "",
+    cost_price: "",
+    quantity: "",
     low_stock_level: "",
+    expiry_date: "",
+    batch_number: "",
   });
 
   function handleSubmit(e) {
@@ -18,8 +21,9 @@ function AddProductForm({ handleAddNewProduct }) {
       product.product_code &&
       product.product_name &&
       product.product_category &&
-      product.product_price &&
-      product.stock_quantity &&
+      product.selling_price &&
+      product.cost_price &&
+      product.quantity &&
       product.low_stock_level
     ) {
       fetch("http://127.0.0.1:8000/api/add-product", {
@@ -28,7 +32,7 @@ function AddProductForm({ handleAddNewProduct }) {
           "Content-Type": "application/json",
           "Authorization": "Bearer " + String(authTokens.access),
         },
-        body: JSON.stringify(product),
+        body: JSON.stringify({ product: product }),
       })
         .then((res) => {
           if (!res.ok) {
@@ -45,11 +49,14 @@ function AddProductForm({ handleAddNewProduct }) {
             product_code: "",
             product_name: "",
             product_category: "",
-            product_price: "",
-            stock_quantity: "",
+            seling_price: "",
+            cost_price: "",
+            quantity: "",
             low_stock_level: "",
+            expiry_date: "",
+            batch_number: "",
           });
-          alert("Product added successfullt!");
+          alert("Product added successfully!");
         });
     } else {
       alert("Values cannot be empty!");
@@ -64,7 +71,6 @@ function AddProductForm({ handleAddNewProduct }) {
           <input
             type="number"
             name="product_code"
-            className="product-code-input"
             placeholder="Product Code"
             value={product.product_code}
             onChange={(e) =>
@@ -74,7 +80,6 @@ function AddProductForm({ handleAddNewProduct }) {
           <input
             type="text"
             name="product_name"
-            className="product-name-input"
             placeholder="Product Name"
             value={product.product_name}
             onChange={(e) =>
@@ -84,7 +89,6 @@ function AddProductForm({ handleAddNewProduct }) {
           <input
             type="text"
             name="product_category"
-            className="product-category-input"
             placeholder="Product Category"
             value={product.product_category}
             onChange={(e) =>
@@ -93,33 +97,57 @@ function AddProductForm({ handleAddNewProduct }) {
           />
           <input
             type="number"
-            name="product_price"
-            className="product-price-input"
-            placeholder="Price per item"
-            value={product.product_price}
+            name="selling_price"
+            placeholder="Selling Price"
+            value={product.selling_price}
             onChange={(e) =>
-              setProduct({ ...product, product_price: e.target.value })
+              setProduct({ ...product, selling_price: e.target.value })
             }
           />
           <input
-            type="text"
-            name="stock_quantity"
-            className="product-stock-input"
-            placeholder="Stock Quantity"
-            value={product.stock_quantity}
+            type="number"
+            name="cost_price"
+            placeholder="Cost Price"
+            value={product.cost_price}
             onChange={(e) =>
-              setProduct({ ...product, stock_quantity: e.target.value })
+              setProduct({ ...product, cost_price: e.target.value })
             }
           />
 
           <input
-            type="text"
+            type="number"
+            name="quantity"
+            placeholder="Stock Quantity"
+            value={product.quantity}
+            onChange={(e) =>
+              setProduct({ ...product, quantity: e.target.value })
+            }
+          />
+          <input
+            type="number"
             name="low_stock_level"
-            className="product-stock-input"
             placeholder="Low Stock Alert Quantity"
             value={product.low_stock_level}
             onChange={(e) =>
               setProduct({ ...product, low_stock_level: e.target.value })
+            }
+          />
+          <input
+            type="date"
+            name="expiry_date"
+            placeholder="Expiry Date"
+            value={product.expiry_date}
+            onChange={(e) =>
+              setProduct({ ...product, expiry_date: e.target.value })
+            }
+          />
+          <input
+            type="text"
+            name="batch_number"
+            placeholder="Batch Number"
+            value={product.batch_number}
+            onChange={(e) =>
+              setProduct({ ...product, batch_number: e.target.value })
             }
           />
         </div>

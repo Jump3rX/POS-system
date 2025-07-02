@@ -2,22 +2,24 @@ import React from "react";
 import { useState, useContext } from "react";
 import AuthContext from "../context/AuthContext";
 
-function EditProductModal({ product, handleSave, closeModal }) {
+function EditProductModal({ product, latestBatch, handleSave, closeModal }) {
   let { authTokens, logoutUser } = useContext(AuthContext);
 
   const [newProduct, setNewProduct] = useState({
     product_code: product.product_code,
     product_name: product.product_name,
     product_category: product.product_category,
-    product_price: product.product_price,
-    stock_quantity: product.stock_quantity,
+    selling_price: product.selling_price,
+    cost_price: product.cost_price,
+    quantity: product.quantity,
     low_stock_level: product.low_stock_level,
   });
+  console.log(latestBatch);
 
   function saveProduct(e) {
     e.preventDefault();
     fetch(`http://127.0.0.1:8000/api/edit-product/${product.id}`, {
-      method: "POST",
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + String(authTokens.access),
@@ -78,28 +80,46 @@ function EditProductModal({ product, handleSave, closeModal }) {
             id="category"
           />
 
-          <label htmlFor="price">Product Price</label>
+          <label htmlFor="price">Selling Price</label>
           <input
             type="number"
             className="edit-product-form-input"
             placeholder="Price per item"
-            value={newProduct.product_price}
+            value={newProduct.selling_price}
             onChange={(e) =>
-              setNewProduct({ ...newProduct, product_price: e.target.value })
+              setNewProduct({ ...newProduct, selling_price: e.target.value })
             }
             id="price"
           />
-          <label htmlFor="quantity">Product Quantity</label>
+
+          <label htmlFor="quantity">Cost Price</label>
+          <input
+            type="text"
+            className="edit-product-form-input"
+            placeholder="Stock Purchase Price"
+            value={newProduct.cost_price}
+            onChange={(e) =>
+              setNewProduct({
+                ...newProduct,
+                cost_price: e.target.value,
+              })
+            }
+            id="quantity"
+          />
+
+          <label htmlFor="quantity">Stock Quantity</label>
           <input
             type="text"
             className="edit-product-form-input"
             placeholder="Stock Quantity"
-            value={newProduct.stock_quantity}
+            value={newProduct.quantity}
             onChange={(e) =>
-              setNewProduct({ ...newProduct, stock_quantity: e.target.value })
+              setNewProduct({ ...newProduct, quantity: e.target.value })
             }
             id="quantity"
           />
+
+          <label htmlFor="low-stock">Low Stock Altert Level</label>
           <input
             type="text"
             className="edit-product-form-input"
@@ -108,7 +128,7 @@ function EditProductModal({ product, handleSave, closeModal }) {
             onChange={(e) =>
               setNewProduct({ ...newProduct, low_stock_level: e.target.value })
             }
-            id="quantity"
+            id="low-stock"
           />
           <button type="submit" className="save-btn">
             Save

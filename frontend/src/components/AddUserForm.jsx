@@ -1,9 +1,10 @@
 import React from "react";
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import AuthContext from "../context/AuthContext";
 
 function AddUserForm({ handleAddNewUser }) {
   let { authTokens, logoutUser } = useContext(AuthContext);
+  const [roles, setRoles] = useState([]);
   const [user, setUser] = useState({
     username: "",
     first_name: "",
@@ -12,6 +13,30 @@ function AddUserForm({ handleAddNewUser }) {
     role: "",
     password: "",
   });
+
+  function getRoles() {
+    fetch("http://127.0.0.1:8000/api/manage-roles", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + String(authTokens.access),
+      },
+    })
+      .then((res) => {
+        if (res.status === 200) {
+          return res.json();
+        } else if (res.statusText === "Unauthorized") {
+          logoutUser();
+        }
+      })
+      .then((data) => {
+        setRoles(data);
+      });
+  }
+
+  useEffect(() => {
+    getRoles();
+  }, []);
   function handleAddUser(e) {
     e.preventDefault();
 
@@ -23,6 +48,7 @@ function AddUserForm({ handleAddNewUser }) {
       user.role &&
       user.password
     ) {
+      console.log(user);
       fetch("http://127.0.0.1:8000/api/create-user", {
         method: "POST",
         headers: {
@@ -94,15 +120,19 @@ function AddUserForm({ handleAddNewUser }) {
           name="role"
           id="employee-role"
           className="create-user-form-input"
-          onChange={(e) => setUser({ ...user, role: e.target.value })}
+          onChange={(e) => setUser({ ...user, role: parseInt(e.target.value) })}
           defaultValue="placeholder"
           value={user.role}
         >
           <option value="" disabled>
             Select employee role
           </option>
-          <option value="cashier">Cashier</option>
-          <option value="admin">Admin</option>
+
+          {roles.map((role) => (
+            <option key={role.id} value={role.id}>
+              {role.name}
+            </option>
+          ))}
         </select>
         <input
           type="password"

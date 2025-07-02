@@ -83,11 +83,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_cron',
     'api',
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist'
+    'rest_framework_simplejwt.token_blacklist',
 ]
 
 MIDDLEWARE = [
@@ -181,3 +182,18 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+EMAIL_HOST_USER = 'conradmax5@gmail.com '
+EMAIL_HOST_PASSWORD = 'iwdhkbggujgfence'
+DEFAULT_FROM_EMAIL = 'conradmax5@gmail.com'
+
+
+CRON_CLASSES = [
+    'api.cron.SendLowStockEmailCronJob',
+]

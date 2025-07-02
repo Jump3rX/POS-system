@@ -20,7 +20,7 @@ function Navbar() {
     <div className="navbar">
       {user ? (
         <>
-          {user.role === "admin" && (
+          {user.role === "manager" && (
             <>
               <NavLink
                 to="/admin"
@@ -80,6 +80,15 @@ function Navbar() {
               >
                 Employees{" "}
                 <img src={employees} alt="" className="navlink-icon" />
+              </NavLink>
+
+              <NavLink
+                to="/roles"
+                className={({ isActive }) =>
+                  "navlink" + (isActive ? " active" : "")
+                }
+              >
+                Roles <img src={employees} alt="" className="navlink-icon" />
               </NavLink>
               <NavLink
                 to="/admin-reports"
