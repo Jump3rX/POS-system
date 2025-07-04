@@ -16,6 +16,11 @@ urlpatterns = [
 
     #================================================================================
 
+    #====================Admin sales management routes========================
+    path('api/get-sales',views.all_sales),
+    path('api/sale-details/<int:id>',views.sale_details, name='sale-details'),
+    #=========================================================================
+
     # ==========USER & ROLE MANAGEMENT ROUTES==========================================
     path('api/create-user',views.create_user, name='create_user'),
     path('api/deactivate-user/<int:id>',views.deactivate_user, name='delete_user'),
@@ -34,7 +39,7 @@ urlpatterns = [
 
 
 
-    path('api/get-sales',views.all_sales),
+    
     path('api/dashboard-data',views.dashboard_data),
     path('api/reports-dashboard',views.reports_dashboard),
     path("api/inventory-report", views.inventory_report, name="inventory-report"),

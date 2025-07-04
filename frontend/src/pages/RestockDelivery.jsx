@@ -6,6 +6,7 @@ import RestockDeliveryVerificationForm from "../components/RestockDeliveryVerifi
 function RestockDelivery() {
   const { authTokens, logoutUser } = useContext(AuthContext);
   const [restockProducts, setRestockProducts] = useState([]); //stores all products received from backend
+  const [allRestockProducts, setAllRestockProducts] = useState([]);
   const [openModal, setOpenModal] = useState(false); //opens and closes single product verification form
   const [productToVerify, setProductToVerify] = useState({}); //used when verifying single product
   const [verifyProducts, setVerifyProducts] = useState([]); //used when verifying multiple products using checkbox
@@ -33,6 +34,7 @@ function RestockDelivery() {
       })
       .then((data) => {
         setRestockProducts(data);
+        setAllRestockProducts(data);
       });
   }
 
@@ -121,6 +123,24 @@ function RestockDelivery() {
   function saveSelected() {
     handleMultiSubmit(verifyProducts);
   }
+
+  function handleSearch(value) {
+    if (!value) {
+      setRestockProducts(allRestockProducts);
+      return;
+    }
+
+    const searchTerm = value.toLowerCase();
+
+    const filtered = allRestockProducts.filter((product) => {
+      const code = String(product.product_code || "").toLowerCase();
+      const name = (product.product_name || "").toLowerCase();
+      return code.includes(searchTerm) || name.includes(searchTerm);
+    });
+
+    setRestockProducts(filtered);
+  }
+
   return (
     <div>
       <div className="restock-product-delivery-container">
@@ -133,6 +153,19 @@ function RestockDelivery() {
         )}
         <div className="restock-delivery-table-container">
           <h2>Restock Delivery</h2>
+          <div className="search-sort-container">
+            <div className="product-search-bar-container">
+              <label htmlFor="search">Search Product</label>
+              <input
+                name="search"
+                type="text"
+                placeholder="Search by code or name"
+                className="product-search-bar"
+                id="search"
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+            </div>
+          </div>
           {verifyProducts && verifyProducts.length > 0 && (
             <button onClick={() => saveSelected()}>Save Selected</button>
           )}

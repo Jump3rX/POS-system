@@ -48,9 +48,9 @@ function RestockOrderForm({ closeModal, product }) {
           </div>
           <hr />
           <div>
-            <p>Current Price: Ksh{product.product_price}</p>
-            <p>Current Stock: {product.stock_quantity}</p>
-            <p>Low Stock Level: {product.low_stock_level}</p>
+            <p>Current Selling Price: Ksh {product.selling_price}</p>
+            <p>Current Stock: {product.quantity}</p>
+            <p>Low Stock Alert Level: {product.low_stock_level}</p>
           </div>
         </div>
         <hr />

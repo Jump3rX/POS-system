@@ -1,12 +1,15 @@
 import React from "react";
 import { useEffect, useState, useContext } from "react";
 import AuthContext from "../context/AuthContext";
+import SaleDetailsModal from "../components/SaleDetailsModal";
 import edt from "../assets/edit.png";
 import eye from "../assets/eye.png";
 
 function SalesAdminPage() {
   const [sales, setSales] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [openModal, setOpenModal] = useState(false);
+  const [saleToView, setSaleToView] = useState({});
   let { authTokens, logoutUser } = useContext(AuthContext);
 
   useEffect(() => {
@@ -53,11 +56,26 @@ function SalesAdminPage() {
       });
   }, []);
 
+  function handleViewSale(saleId) {
+    // This function will handle the logic to view a sale's details
+    // For now, it just logs the saleId to the console
+    console.log(saleId);
+    setSaleToView(saleId);
+    setOpenModal(true);
+  }
+
+  function closeModalFunction() {
+    setOpenModal(false);
+    setSaleToView({});
+  }
   return (
     <>
       <div className="sales-page-container">
         <div className="sales-list-table">
           <h2>Sales Transactions</h2>
+          {openModal && (
+            <SaleDetailsModal sale={saleToView} close={closeModalFunction} />
+          )}
           <table>
             <thead>
               <tr>
@@ -66,10 +84,10 @@ function SalesAdminPage() {
                 <th>Employee</th>
                 <th>Total(Ksh)</th>
                 <th>Amount Tendered</th>
-                <th>Change Due</th>
+                <th>Change</th>
                 <th>Payment Method</th>
                 <th>Mpesa Code</th>
-                {/* <th>Action</th> */}
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -84,7 +102,7 @@ function SalesAdminPage() {
                       );
                       return employee
                         ? `${employee.first_name} ${employee.last_name}`
-                        : "Unknown";
+                        : "-";
                     })()}
                   </td>
                   <td>{Number(sale.total)?.toLocaleString() || "0"}</td>
@@ -92,6 +110,11 @@ function SalesAdminPage() {
                   <td>{sale.change || "NA"}</td>
                   <td>{sale.payment_method}</td>
                   <td>N/A</td>
+                  <td>
+                    <button onClick={() => handleViewSale(sale.id)}>
+                      View
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -33,6 +33,8 @@ class addSalesSerializer(serializers.ModelSerializer):
         fields = ['id','seller_id','total','payment_method','amount_tendered','change']
 
 class addSaleItemsSerializer(serializers.ModelSerializer):
+    product_code = serializers.IntegerField(source='product.product_code', read_only=True)
+    product_name = serializers.CharField(source='product.product_name', read_only=True)
     class Meta:
         model = sale_items
         fields = '__all__'
