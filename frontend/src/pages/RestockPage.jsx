@@ -6,7 +6,8 @@ import AuthContext from "../context/AuthContext";
 function RestockPage() {
   const { authTokens, logoutUser } = useContext(AuthContext);
   const [stockData, setStockData] = useState({});
-  const [lowStockProducts, setLowStockProducts] = useState([]);
+  const [productsData, setProductsData] = useState([]);
+  const [lowStockProducts, setLowStockProducts] = useState(productsData);
   const [openModal, setOpenModal] = useState(false);
   const [productToRestock, setProductToRestock] = useState({});
 
@@ -31,7 +32,8 @@ function RestockPage() {
       })
       .then((data) => {
         setStockData(data);
-        setLowStockProducts(data?.low_stock_products);
+        setProductsData(data?.low_stock_products || []);
+        setLowStockProducts(data?.low_stock_products || []);
       });
   }
   function openRestockModal(product) {
@@ -43,6 +45,23 @@ function RestockPage() {
     setOpenModal(false);
     fetchProducts();
   }
+
+  function handleSearch(value) {
+    const searchTerm = value.toLowerCase().trim();
+
+    if (searchTerm === "") {
+      setLowStockProducts(productsData); // Reset to full list
+    } else {
+      const filteredProducts = productsData.filter((product) => {
+        const code = String(product.product_code).toLowerCase();
+        const name = product.product_name.toLowerCase();
+        return code.includes(searchTerm) || name.includes(searchTerm);
+      });
+
+      setLowStockProducts(filteredProducts); // Update UI with filtered list
+    }
+  }
+
   return (
     <div>
       <div className="restock-page-container">
@@ -75,13 +94,26 @@ function RestockPage() {
           </div>
           <div className="main-section">
             <h2>Low Stock Products</h2>
+            <div className="search-sort-container">
+              <div className="product-search-bar-container">
+                <label htmlFor="search">Search Product</label>
+                <input
+                  name="search"
+                  type="text"
+                  placeholder="Search by code or name"
+                  className="product-search-bar"
+                  id="search"
+                  onChange={(e) => handleSearch(e.target.value)}
+                />
+              </div>
+            </div>
             <table>
               <thead>
                 <tr>
                   <th>Code</th>
                   <th>Name</th>
                   <th>Category</th>
-                  <th>Price (Ksh)</th>
+                  <th>Selling Price</th>
                   <th>Stock</th>
                   <th>Low Stock Alert</th>
                   <th>Restock</th>
@@ -94,8 +126,8 @@ function RestockPage() {
                       <td>{product?.product_code}</td>
                       <td>{product?.product_name}</td>
                       <td>{product?.product_category}</td>
-                      <td>{product?.product_price}</td>
-                      <td>{product?.stock_quantity}</td>
+                      <td>{product?.selling_price}</td>
+                      <td>{product?.quantity}</td>
                       <td>{product?.low_stock_level}</td>
                       <td>
                         <button onClick={() => openRestockModal(product)}>

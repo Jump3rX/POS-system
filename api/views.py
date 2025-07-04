@@ -592,6 +592,28 @@ def all_sales(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated,isManagerRole])
+def sale_details(request,id):
+    try:
+        sale = counter_sales.objects.get(id=id)
+    except counter_sales.DoesNotExist:
+        return Response({'message':'Sale not found!'},status=status.HTTP_404_NOT_FOUND)
+    
+    items = sale_items.objects.filter(sale=sale)
+    serialized_items = addSaleItemsSerializer(items,many=True).data
+    response_data = {
+        'id':sale.id,
+        'seller':sale.seller_id.first_name,
+        'sale_date':sale.sale_date,
+        'total':float(sale.total),
+        'payment_method':sale.payment_method,
+        'amount_tendered':float(sale.amount_tendered),
+        'change':float(sale.change),
+        'items':serialized_items
+    }
+    return Response(response_data,status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated,isManagerRole])
 def chart_data(request):
     last_7_days = now().date() - timedelta(days=7)
     daily_sales = (
