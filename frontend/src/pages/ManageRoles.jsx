@@ -1,5 +1,4 @@
-import React from "react";
-import { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import AuthContext from "../context/AuthContext";
 import EditRoleModel from "../components/EditRoleModel";
 import edt from "../assets/edit.png";
@@ -8,8 +7,10 @@ import remove from "../assets/remove.png";
 function ManageRoles() {
   const { authTokens, logoutUser } = useContext(AuthContext);
   const [roles, setRoles] = useState([]);
+  const [filteredRoles, setFilteredRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
 
+  const [searchQuery, setSearchQuery] = useState("");
   const [roleName, setRoleName] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [openModel, setOpenModel] = useState(false);
@@ -21,100 +22,152 @@ function ManageRoles() {
     );
   };
 
-  function handleSetNewRole(e) {
+  const handleSetNewRole = (e) => {
     e.preventDefault();
     const newRole = {
       name: roleName,
       permission_ids: selectedPermissions,
     };
-    console.log(newRole);
     handleCreateRole(newRole);
-  }
+  };
 
-  function handleCreateRole(newRole) {
+  const handleCreateRole = (newRole) => {
     fetch("http://127.0.0.1:8000/api/manage-roles", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + String(authTokens.access),
+        Authorization: "Bearer " + String(authTokens.access),
       },
       body: JSON.stringify(newRole),
     })
       .then((res) => res.json())
       .then((data) => {
-        alert("Role created successfuly!");
+        alert("Role created successfully!");
+        fetchRoles(); // Refresh the list after creation
+        setRoleName(""); // Clear the input field
+        setSelectedPermissions([]); // Clear selected permissions
       });
-  }
-  useEffect(() => {
+  };
+
+  const fetchRoles = () => {
     fetch("http://127.0.0.1:8000/api/manage-roles", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + String(authTokens.access),
+        Authorization: "Bearer " + String(authTokens.access),
       },
     })
       .then((res) => {
-        if (res.status === 200) {
-          return res.json();
-        } else if (res.statusText === "Unauthorized") {
-          logoutUser();
-        }
+        if (res.status === 200) return res.json();
+        if (res.statusText === "Unauthorized") logoutUser();
       })
       .then((data) => {
-        //console.log(data);
         setRoles(data);
+        setFilteredRoles(data); // Initial filtered set
       });
+  };
 
+  const fetchPermissions = () => {
     fetch("http://127.0.0.1:8000/api/get-permissions", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + String(authTokens.access),
+        Authorization: "Bearer " + String(authTokens.access),
       },
     })
       .then((res) => {
-        if (res.status === 200) {
-          return res.json();
-        } else if (res.statusText === "Unauthorized") {
-          logoutUser();
-        }
+        if (res.status === 200) return res.json();
+        if (res.statusText === "Unauthorized") logoutUser();
       })
       .then((data) => {
-        //console.log(data);
         setPermissions(data);
       });
+  };
+
+  useEffect(() => {
+    fetchRoles();
+    fetchPermissions();
   }, []);
 
-  function handleEditRole(role) {
-    console.log(role);
+  useEffect(() => {
+    const filtered = roles.filter((role) =>
+      role.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredRoles(filtered);
+  }, [searchQuery, roles]);
+
+  const handleEditRole = (role) => {
     setOpenModel(true);
     setRoleToEdit(role);
-  }
-  function handleDeleteRole(role) {
-    console.log(role);
-  }
+  };
 
-  function closeModel() {
+  const handleDeleteRole = (role) => {
+    if (
+      window.confirm(`Are you sure you want to delete the role: ${role.name}?`)
+    ) {
+      fetch(`http://127.0.0.1:8000/api/delete-role/${role.id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + String(authTokens.access),
+        },
+      })
+        .then((res) => {
+          if (res.status === 401 || res.statusText === "Unauthorized") {
+            logoutUser();
+          } else if (!res.ok) {
+            throw new Error("Failed to delete role");
+          }
+          return res.json();
+        })
+        .then((data) => {
+          alert(data.message);
+          fetchRoles();
+          fetchPermissions();
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          alert("An error occurred while deleting the role.");
+        });
+    }
+  };
+
+  const closeModel = () => {
     setOpenModel(false);
-  }
+  };
+
   return (
     <div className="role-container">
       {openModel && <EditRoleModel closeModel={closeModel} role={roleToEdit} />}
+
       <div className="role-table-container">
         <h2>Current Roles</h2>
+
+        <input
+          type="text"
+          placeholder="Search by role name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            marginBottom: "10px",
+            padding: "6px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+            width: "250px",
+          }}
+        />
+
         <table>
           <thead>
             <tr>
-              <th>ID</th>
               <th>Role Name</th>
               <th>N.O Permissions</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {roles.map((role) => (
+            {filteredRoles.map((role) => (
               <tr key={role.id}>
-                <td>{role.id || "None"}</td>
                 <td>{role.name || "None"}</td>
                 <td>{role.permissions.length || "00"}</td>
                 <td>
@@ -122,13 +175,13 @@ function ManageRoles() {
                     onClick={() => handleDeleteRole(role)}
                     className="delete-btn"
                   >
-                    <img src={edt} alt="" className="edit-btn-img" />
+                    <img src={remove} alt="" className="edit-btn-img" />
                   </button>
                   <button
                     onClick={() => handleEditRole(role)}
                     className="edit-btn"
                   >
-                    <img src={remove} alt="" className="edit-btn-img" />
+                    <img src={edt} alt="" className="edit-btn-img" />
                   </button>
                 </td>
               </tr>
@@ -144,7 +197,7 @@ function ManageRoles() {
           <input
             type="text"
             className="role-input-text"
-            value={roleName.name}
+            value={roleName}
             onChange={(e) => setRoleName(e.target.value)}
             required
           />

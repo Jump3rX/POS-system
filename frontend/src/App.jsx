@@ -15,6 +15,7 @@ import CashierProductsPage from "./pages/CashierProductsPage";
 import RestockPage from "./pages/RestockPage";
 import RestockDelivery from "./pages/RestockDelivery";
 import ManageRoles from "./pages/ManageRoles";
+import PriceAdjustmentPage from "./pages/PriceAdjustmentPage";
 import { Layout } from "./Layout";
 import { AuthProvider } from "./context/AuthContext";
 function App() {
@@ -54,6 +55,15 @@ function App() {
                 element={
                   <PrivateRoute requiredRole="manager">
                     <ProductsPage />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/price-adjustment"
+                element={
+                  <PrivateRoute requiredRole="manager">
+                    <PriceAdjustmentPage />
                   </PrivateRoute>
                 }
               />

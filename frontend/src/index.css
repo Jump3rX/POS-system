@@ -174,6 +174,66 @@ body {
 .navlink.active {
   border-bottom: 2px solid white;
 }
+
+/* ================= Dropdown styling update =================== */
+
+.dropdown {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+#button-dropdown {
+  font-size: 15px;
+  font-weight: bold;
+}
+.dropdown > .navlink {
+  background-color: transparent;
+  border: none;
+  color: white;
+  font-weight: bold;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.dropdown > .navlink:hover,
+.dropdown > .navlink.active {
+  border-bottom: 2px solid white;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: #007aff;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  z-index: 1000;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid #ffffff33;
+}
+
+.dropdown-content .navlink {
+  color: white;
+  text-decoration: none;
+  padding: 10px 16px;
+  font-weight: 500;
+}
+
+.dropdown-content .navlink:hover {
+  background-color: #005bb5;
+}
+
+/* Optional: visually differentiate dropdown items */
+.dropdown-content .navlink:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 /*================================================*/
 
 /*===============Tables style=================*/
@@ -299,6 +359,89 @@ thead {
   margin-right: 10px;
 }
 /*============================================*/
+/*==============Price asjustment page styling=================*/
+.price-adjustment-container {
+  padding: 2rem;
+  background-color: #f9f9f9;
+  min-height: 100vh;
+}
+
+.price-adjustment-container h2 {
+  margin-bottom: 1.5rem;
+  color: #333;
+  font-size: 1.8rem;
+}
+
+.price-adjustment-table tbody tr:hover {
+  background-color: #f7f7f7;
+}
+
+.price-adjustment-table td button {
+  background-color: #007bff;
+  color: #fff;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.price-adjustment-table td button:hover {
+  background-color: #0056b3;
+}
+
+.price-form {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 10px;
+  width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.price-form h2 {
+  margin-bottom: 1rem;
+  font-size: 1.4rem;
+}
+
+.price-form label {
+  display: block;
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+.price-form input {
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.3rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.form-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.btn-submit {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1.2rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-cancel {
+  background-color: #ccc;
+  border: none;
+  padding: 0.5rem 1.2rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/*==================================================*/
 
 /*============Restock Page Styling============*/
 .restock-page-container {

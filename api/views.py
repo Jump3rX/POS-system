@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from django.http import HttpResponse
 from django.contrib.auth.models import User,Permission
 from django.contrib.auth import authenticate
@@ -12,12 +11,13 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 import io
 from django.core.mail import EmailMessage
+from django.core.exceptions import ValidationError
 
 from rest_framework.decorators import api_view,permission_classes
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import autoEmailSerializer,ProductsSerializer,UserSerializer,ProfileSerializer,RoleSerializer,PermissionSerializer,UserProfileSerializer, addSalesSerializer, addSaleItemsSerializer,adminSalesViewSerializer, productRestockSerializer,restockDeliverySerializer, watchProductSerializer
-from .models import products,Profile,counter_sales,sale_items,restock_orders,Role, auto_email_settings,WatchedProduct
+from .serializers import PriceChangesSerializer,autoEmailSerializer,ProductsSerializer,UserSerializer,ProfileSerializer,RoleSerializer,PermissionSerializer,UserProfileSerializer, addSalesSerializer, addSaleItemsSerializer,adminSalesViewSerializer, productRestockSerializer,restockDeliverySerializer, watchProductSerializer
+from .models import products,Profile,counter_sales,sale_items,restock_orders,Role, auto_email_settings,WatchedProduct,ScheduledPriceChanges
 from rest_framework.permissions import IsAuthenticated
 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -367,6 +367,89 @@ def delete_product(request,id):
 
     return Response('Product Deleted!')
 
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, isManagerRole])
+def price_changes(request, id):
+    try:
+        product = products.objects.get(id=id)
+    except products.DoesNotExist:
+        return Response({'message': 'Product not found!'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Extract and validate prices
+    selling_price = request.data.get('newSellingPrice')
+    cost_price = request.data.get('newCostPrice')
+
+    if not selling_price or not cost_price:
+        return Response({'message': 'Both selling and cost price are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        selling_price = Decimal(selling_price)
+        cost_price = Decimal(cost_price)
+    except InvalidOperation:
+        return Response({'message': 'Invalid price format. Use valid decimal values.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Extract and parse dates
+    def parse_date_or_none(date_str):
+        if not date_str or date_str.strip() in ["", "null", "None"]:
+            return None
+        try:
+            return datetime.fromisoformat(date_str)
+        except ValueError:
+            try:
+                return datetime.strptime(date_str, "%Y-%m-%d")
+            except ValueError:
+                raise ValidationError(f"Invalid date format: '{date_str}'")
+
+    try:
+        activation_date = parse_date_or_none(request.data.get('activationDate'))
+        end_date = parse_date_or_none(request.data.get('endDate'))
+    except ValidationError as e:
+        return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Save the price change
+    ScheduledPriceChanges.objects.create(
+        product=product,
+        new_selling_price=selling_price,
+        new_cost_price=cost_price,
+        activation_date=activation_date,
+        end_date=end_date,
+        created_by=request.user
+    )
+
+    return Response({'message': 'Price change scheduled successfully!'}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated,isManagerRole])
+def get_price_changes(request):
+    price_changes = ScheduledPriceChanges.objects.all()
+    serializer = PriceChangesSerializer(price_changes, many=True)
+    return Response(serializer.data)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated, isManagerRole])
+def price_changes_edit(request, id):
+    try:
+        price_change = ScheduledPriceChanges.objects.get(id=id)
+    except ScheduledPriceChanges.DoesNotExist:
+        return Response({'message': 'Price change not found!'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Clean the incoming data: convert empty strings to None
+    data = request.data.copy()
+    if data.get("activation_date") == "":
+        data["activation_date"] = None
+    if data.get("end_date") == "":
+        data["end_date"] = None
+
+    # Pass cleaned data to the serializer
+    serializer = PriceChangesSerializer(instance=price_change, data=data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'message': 'Price change updated successfully!'}, status=status.HTTP_200_OK)
+    else:
+        return Response({'message': f'Invalid data: {serializer.errors}'}, status=status.HTTP_400_BAD_REQUEST)
+
+
 ###############USER, ROLES & PERMISSIONS MANAGEMENT###############
 @api_view(['POST'])
 @permission_classes([IsAuthenticated,isManagerRole])
@@ -499,19 +582,20 @@ def get_permissions(request):
     return Response(serializer.data)
 
 
-@api_view(['PATCH'])
+
+@api_view(['PUT'])
 @permission_classes([IsAuthenticated, isManagerRole])
 def edit_role(request, id):
     try:
         role = Role.objects.get(id=id)
-        serialier = RoleSerializer(instance=role, data=request.data)
-        if serialier.is_valid():
-            serialier.save()
-            return Response({'message':'Role Edited Successfully!'}, status=status.HTTP_200_OK)
+        serializer = RoleSerializer(instance=role, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'message': 'Role Edited Successfully!'}, status=status.HTTP_200_OK)
         else:
-            return Response({f'message':{serialier.errors}}, status=status.HTTP_400_BAD_REQUEST)
-    except role.DoesNotExist:
-        return Response({'message':'Role not found!'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'message': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except Role.DoesNotExist:
+        return Response({'message': 'Role not found!'}, status=status.HTTP_404_NOT_FOUND)
 
 
 

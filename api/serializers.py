@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User, Permission
-from .models import products,WatchedProduct, auto_email_settings,Role,purchase_orders, counter_sales,restock_orders,Profile,sale_items,restock_delivery
+from .models import products,WatchedProduct, ScheduledPriceChanges,auto_email_settings,Role,purchase_orders, counter_sales,restock_orders,Profile,sale_items,restock_delivery
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -26,6 +26,15 @@ class ProductsSerializer(serializers.ModelSerializer):
     class Meta:
         model = products
         fields = '__all__'
+
+class PriceChangesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScheduledPriceChanges
+        fields = '__all__'
+        extra_kwargs = {
+            'activation_date': {'required': False, 'allow_null': True},
+            'end_date': {'required': False, 'allow_null': True},
+        }
 
 class addSalesSerializer(serializers.ModelSerializer):
     class Meta:
@@ -76,6 +85,16 @@ class RoleSerializer(serializers.ModelSerializer):
         role = Role.objects.create(**validated_data)
         role.permissions.set(permission_ids)  
         return role
+     
+    def update(self, instance, validated_data):
+        permission_ids = validated_data.pop('permission_ids', None)
+        instance.name = validated_data.get('name', instance.name)
+        instance.save()
+
+        if permission_ids is not None:
+            instance.permissions.set(permission_ids)
+
+        return instance
 
 class autoEmailSerializer(serializers.ModelSerializer):
     class Meta:

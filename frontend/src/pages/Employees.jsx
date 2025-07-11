@@ -7,9 +7,11 @@ import AuthContext from "../context/AuthContext";
 
 function Employees() {
   const [employees, setEmployees] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   let { authTokens, logoutUser } = useContext(AuthContext);
+
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/employees", {
       method: "GET",
@@ -31,12 +33,20 @@ function Employees() {
         setEmployees(data);
       });
   }, []);
+
+  const filteredEmployees = employees.filter((emp) =>
+    `${emp.first_name} ${emp.last_name} ${emp.email}`
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
+  );
+
   let empCount = employees.length;
+
   function handleAddNewUser(newUser) {
     setEmployees((e) => [...e, newUser]);
   }
+
   function deactivateUser(id) {
-    console.log(id);
     if (window.confirm("Are you sure you want to deactivate this user?")) {
       fetch(`http://127.0.0.1:8000/api/deactivate-user/${id}`, {
         method: "POST",
@@ -60,25 +70,37 @@ function Employees() {
     setEmployeeToEdit(employee);
     setIsEditModalOpen(true);
   }
+
   function handleSaveEmployee(updatedEmployee) {
     setEmployees((e) =>
       e.map((employee) =>
         employee.id === updatedEmployee.id ? updatedEmployee : employee
       )
     );
-    console.log(employees);
     setIsEditModalOpen(false);
   }
+
   return (
     <>
       <div className="employees-list-main-container">
         <div className="employees-table-container">
           <h1>Employees</h1>
+
+          {/* 🔍 Search input */}
+          <input
+            type="text"
+            placeholder="Search employee by name or email"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ padding: "8px", marginBottom: "15px", width: "100%" }}
+          />
+
           <EmployeesTable
-            employees={employees}
+            employees={filteredEmployees}
             deactivateUser={deactivateUser}
             handleEmployeeEdit={handleEmployeeEdit}
           />
+
           {isEditModalOpen && (
             <EditEmployeeForm
               employee={employeeToEdit}

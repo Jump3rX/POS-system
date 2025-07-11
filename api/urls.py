@@ -13,6 +13,9 @@ urlpatterns = [
     path('api/add-product',views.add_product, name='add_product'),
     path('api/edit-product/<int:id>',views.edit_product, name='edit_product'),
     path('api/delete-product/<int:id>',views.delete_product, name='delete_product'),
+    path('api/price-changes/<int:id>', views.price_changes, name='price_changes'),
+    path('api/get-price-changes', views.get_price_changes, name='get_price_changes'),
+    path('api/price-change-edit/<int:id>', views.price_changes_edit, name='price_change_edit'),
 
     #================================================================================
 
