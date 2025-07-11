@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import Permission
 from django.utils.translation import gettext_lazy as _
-from .models import WatchedProduct,auto_email_settings,products,Profile,Role,purchase_orders,counter_sales,restock_orders,sale_items,restock_delivery
+from .models import WatchedProduct,auto_email_settings,products,Profile,Role,purchase_orders,counter_sales,restock_orders,sale_items,restock_delivery, ScheduledPriceChanges
 # Register your models here.
 
 
@@ -69,3 +69,4 @@ admin.site.register(restock_delivery, CustomAdmin)
 admin.site.register(auto_email_settings)
 admin.site.register(WatchedProduct)
 
+admin.site.register(ScheduledPriceChanges, CustomAdmin)

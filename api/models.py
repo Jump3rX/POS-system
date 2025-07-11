@@ -37,9 +37,21 @@ class products(models.Model):
         verbose_name_plural = "products"
         
     def __str__(self):
-        return f"{self.product.product_name} - {self.product_code}"
+        return f"{self.product_name} - {self.product_code}"
 
+class ScheduledPriceChanges(models.Model):
+    product = models.ForeignKey(products, on_delete=models.CASCADE)
+    new_selling_price = models.DecimalField(max_digits=10, decimal_places=2)
+    new_cost_price = models.DecimalField(max_digits=10, decimal_places=2)
+    activation_date = models.DateField(blank=True,null=True)
+    end_date = models.DateField(blank=True, null=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
 
+    class Meta:
+        verbose_name_plural = "Scheduled Price Changes"
+        
+    def __str__(self):
+        return f"{self.product.product_name} - {self.new_selling_price} on {self.activation_date or 'No Activation Date'}"
 
 class counter_sales(models.Model):
     seller_id = models.ForeignKey(User,on_delete=models.CASCADE)

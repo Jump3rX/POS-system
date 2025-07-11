@@ -4,11 +4,11 @@ import AuthContext from "../context/AuthContext";
 function EditRoleModel({ closeModel, role }) {
   const { authTokens, logoutUser } = useContext(AuthContext);
   const [permissions, setPermissions] = useState([]);
-  const [newPermissions, setNewPermissions] = useState([]);
 
+  // ✅ Extract permission IDs from role.permissions
   const [editRole, setEditRole] = useState({
-    name: role.name,
-    permissions: role.permissions,
+    name: role.name || "",
+    permissions: role.permissions?.map((perm) => perm.id) || [],
   });
 
   useEffect(() => {
@@ -16,45 +16,78 @@ function EditRoleModel({ closeModel, role }) {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + String(authTokens.access),
+        Authorization: "Bearer " + String(authTokens.access),
       },
     })
       .then((res) => {
-        if (res.status === 200) {
-          return res.json();
-        } else if (res.statusText === "Unauthorized") {
+        if (res.status === 401 || res.statusText === "Unauthorized") {
           logoutUser();
         }
+        return res.json();
       })
       .then((data) => {
-        //console.log(data);
         setPermissions(data);
       });
-  }, []);
+  }, [authTokens, logoutUser]);
 
-  function handleNameChange(e) {
+  const handleNameChange = (e) => {
     setEditRole((prev) => ({ ...prev, name: e.target.value }));
-  }
+  };
 
-  function handlePermissionChange(permissionId) {
+  const handlePermissionChange = (permId) => {
     setEditRole((prev) => {
-      const updatedPermissions = prev.permissions.includes(permissionId)
-        ? prev.permissions.filter((id) => id !== permissionId) // Remove if already present
-        : [...prev.permissions, permissionId]; // Add if not present
+      const updatedPermissions = prev.permissions.includes(permId)
+        ? prev.permissions.filter((id) => id !== permId)
+        : [...prev.permissions, permId];
       return { ...prev, permissions: updatedPermissions };
     });
-  }
-  console.log(editRole);
+  };
+
+  const handleSave = (e) => {
+    e.preventDefault();
+
+    const payload = {
+      name: editRole.name,
+      permission_ids: editRole.permissions,
+    };
+
+    fetch(`http://127.0.0.1:8000/api/edit-role/${role.id}`, {
+      method: "PUT", // or PATCH depending on your view
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + String(authTokens.access),
+      },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => {
+        if (res.status === 401 || res.statusText === "Unauthorized") {
+          logoutUser();
+        } else if (!res.ok) {
+          throw new Error("Failed to update role");
+        }
+        return res.json();
+      })
+      .then((data) => {
+        alert("Role updated successfully");
+        closeModel();
+      })
+      .catch((error) => {
+        console.error("Error updating role:", error);
+        alert("Error updating role");
+      });
+  };
+
   return (
     <div className="modal">
       <div className="modal-content">
         <h2>Edit Role</h2>
-        <button onClick={() => closeModel()}>Close</button>
+        <button onClick={closeModel}>Close</button>
         <hr />
-        <form>
+        <form onSubmit={handleSave}>
           <label htmlFor="role-name">Role Name</label>
           <input
             type="text"
+            id="role-name"
             value={editRole.name}
             onChange={handleNameChange}
           />
@@ -63,14 +96,15 @@ function EditRoleModel({ closeModel, role }) {
               <div key={p.id} className="permission-item">
                 <input
                   type="checkbox"
-                  id={p.id}
+                  id={`perm-${p.id}`}
                   checked={editRole.permissions.includes(p.id)}
                   onChange={() => handlePermissionChange(p.id)}
                 />
-                <label htmlFor={p.id}>{p.name}</label>
+                <label htmlFor={`perm-${p.id}`}>{p.name}</label>
               </div>
             ))}
           </div>
+          <button type="submit">Save Changes</button>
         </form>
       </div>
     </div>
