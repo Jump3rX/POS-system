@@ -28,6 +28,7 @@ class products(models.Model):
     cost_price = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.IntegerField(default=0)
     low_stock_level = models.IntegerField()
+    total_quantity = models.IntegerField(default=0)
     expiry_date = models.DateField(null=True, blank=True)
     batch_number = models.CharField(max_length=50, unique=True, null=True, blank=True)
     added_on = models.DateTimeField(auto_now_add=True)

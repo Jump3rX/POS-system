@@ -3,7 +3,7 @@ from django.contrib.auth.models import User,Permission
 from django.contrib.auth import authenticate
 from django.utils.timezone import timedelta,now
 from django.utils import timezone
-from django.db.models import Sum,Value,F,DateField,ExpressionWrapper, FloatField
+from django.db.models import Sum,Value,F,DateField,ExpressionWrapper, FloatField,DecimalField
 from django.db.models.functions import Concat,TruncDate
 from django.shortcuts import get_object_or_404
 from django.db import models
@@ -83,7 +83,7 @@ def add_product(request):
     print(f"Product Data: {product_data}")
     if not product_data:
         return Response({'message': 'Product data required!!'}, status=status.HTTP_400_BAD_REQUEST)
-    
+
     product_serializer = ProductsSerializer(data=product_data)
     if product_serializer.is_valid():
         product_serializer.save()
@@ -136,21 +136,22 @@ def bulk_upload(request):
                     selling_price = Decimal(str(row['selling_price']).replace(',', '').strip())
                 except:
                     selling_price = Decimal('0.00')
-
                 try:
                     cost_price = Decimal(str(row['cost_price']).replace(',', '').strip())
                 except:
                     cost_price = Decimal('0.00')
-
                 try:
                     quantity = int(row['quantity']) if row['quantity'].isdigit() else 0
                 except:
                     quantity = 0
-
                 try:
                     low_stock_level = int(row['low_stock_level']) if row['low_stock_level'].isdigit() else 0
                 except:
                     low_stock_level = 0
+                try:
+                    total_quantity = int(row['quantity']) if row['quantity'].isdigit() else 0
+                except:
+                    total_quantity = 0
 
                 # Parse expiry date
                 expiry_date = None
@@ -171,6 +172,7 @@ def bulk_upload(request):
                         'cost_price': cost_price,
                         'quantity': quantity,
                         'low_stock_level': low_stock_level,
+                        'total_quantity': total_quantity,
                         'expiry_date': expiry_date,
                         'batch_number': batch_number
                     }
@@ -774,69 +776,141 @@ def reports_dashboard(request):
 
 @permission_classes([IsAuthenticated,isManagerRole])
 def inventory_report(request):
-    reponse  = HttpResponse(content_type='application/pdf')
-    reponse['Content-Disposition'] = 'attachment; filename="Inventory_Report.pdf"'
-    pdf = canvas.Canvas(reponse,pagesize=A4)
-    width,height = A4
-
-    pdf.setFont("Helvetica-Bold",16)
-    pdf.drawString(200,height-50,'Inventory Report')
-    all_products = products.objects.all().values_list('product_code', 'product_name', 'unit_price', 'quantity')
-
-    data = [["Code","Product Name","Price","Quantity"]]
-    for product in all_products:
-        data.append(list(product))
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="Inventory_Report.pdf"'
+    #SimpleDocTemplate(response, pagesize=A4, leftMargin=30, rightMargin=30, topMargin=50, bottomMargin=50)
     
-    table = Table(data,colWidths=[80,200,100,100])
+    doc = SimpleDocTemplate(response, pagesize=landscape(A4), topMargin=50, bottomMargin=50, leftMargin=30, rightMargin=30)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # Title
+    title = Paragraph("Inventory Report", styles['Title'])
+    elements.append(title)
+    elements.append(Spacer(1, 12))
+
+    now = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+    generated_text = f"Report generated on: {now}"
+    elements.append(Paragraph(generated_text, styles['Normal']))
+    elements.append(Spacer(1, 10))
+
+    # Table headers
+    data = [["Product Code", "Product Name", "Selling Price", "Cost Price","Initial Quantity" ,"Current Quantity", "Total Value"]]
+
+    all_products = products.objects.all()
+    total_items = all_products.count()
+    total_stock_value = 0
+
+    for p in all_products:
+        selling_price = float(p.selling_price or 0)
+        cost_price = float(p.cost_price or 0)
+        initial_quantity = int(p.total_quantity or 0)
+        quantity = int(p.quantity or 0)
+        total_value = cost_price * initial_quantity
+        total_stock_value += total_value
+
+        data.append([
+            p.product_code,
+            p.product_name,
+            f"Ksh {selling_price:,.2f}",
+            f"Ksh {cost_price:,.2f}",
+            initial_quantity,
+            quantity,
+            f"Ksh {total_value:,.2f}"
+        ])
+
+    table = Table(data, colWidths=[80, 150, 90, 90, 70, 100])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
     ]))
 
-    table.wrapOn(pdf,width,height)
-    table.drawOn(pdf,50,height-200)
+    elements.append(table)
+    elements.append(Spacer(1, 20))
 
-    pdf.save()
+    # Summary Info
+    summary_text = (
+        f"<b>Total distinct products:</b> {total_items} &nbsp;&nbsp;&nbsp;&nbsp; "
+        f"<b>Total stock value:</b> Ksh {total_stock_value:,.2f}"
+    )
+    summary = Paragraph(summary_text, styles['Normal'])
+    elements.append(summary)
+    elements.append(Spacer(1, 20))
 
-    return reponse
+
+    # Explanation note
+    note_text = (
+        "Note: Stock value is calculated as <b>Cost Price × Initial Quantity</b>. "
+        "The initial quantity reflects the stock added at the time of product creation "
+        "and remains unchanged to provide a consistent valuation baseline. "
+        "Current quantity represents the remaining stock after sales."
+    )
+    note_para = Paragraph(note_text, styles['Normal'])
+    elements.append(note_para)
+
+    doc.build(elements)
+    return response
 
 @permission_classes([IsAuthenticated,isManagerRole])
 def low_stock_products_report(request):
-    reponse  = HttpResponse(content_type='application/pdf')
-    reponse['Content-Disposition'] = 'attachment; filename="Low Stock Products.pdf"'
-    pdf = canvas.Canvas(reponse,pagesize=A4)
-    width,height = A4
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="Low_Stock_Products_Report.pdf"'
 
-    pdf.setFont("Helvetica-Bold",16)
-    pdf.drawString(200,height-50,'Low Stock Products')
-    all_products = products.objects.filter(quantity__lte=models.F('low_stock_level')).values_list('product_code', 'product_name', 'unit_price', 'quantity','low_stock_level')
+    doc = SimpleDocTemplate(response, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=60, bottomMargin=40)
+    elements = []
+    styles = getSampleStyleSheet()
 
-    data = [["Code","Product Name","Price","Quantity","Low Stock Alert"]]
-    for product in all_products:
-        data.append(list(product))
-    
-    table = Table(data,colWidths=[80,150,100,100])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    ]))
+    # Title
+    elements.append(Paragraph("Low Stock Products Report", styles['Title']))
+    elements.append(Spacer(1, 12))
 
-    table.wrapOn(pdf,width,height)
-    table.drawOn(pdf,50,height-200)
+    # Timestamp
+    now = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+    elements.append(Paragraph(f"Report generated on: {now}", styles['Normal']))
+    elements.append(Spacer(1, 12))
 
-    pdf.save()
+    # Query products with low stock
+    low_stock_products = products.objects.filter(quantity__lte=models.F('low_stock_level')).values_list(
+        'product_code', 'product_name', 'selling_price', 'quantity', 'low_stock_level'
+    )
 
-    return reponse
+    if not low_stock_products:
+        elements.append(Paragraph("All products are sufficiently stocked.", styles['Normal']))
+    else:
+        # Table data
+        data = [["Product Code", "Product Name", "Price (Ksh)", "Quantity", "Low Stock Threshold"]]
+        for p in low_stock_products:
+            data.append([p[0], p[1], f"{float(p[2]):,.2f}", p[3], p[4]])
+
+        table = Table(data, colWidths=[80, 200, 80, 80, 100])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.lightyellow),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+        # Summary Note
+        note_text = (
+            "This report lists all products whose current stock quantity is equal to or below the set low stock threshold. "
+            "Timely restocking of these items is recommended to avoid stockouts."
+        )
+        elements.append(Paragraph(note_text, styles['Italic']))
+
+    doc.build(elements)
+    return response
 
 
 
@@ -910,6 +984,11 @@ def monthly_sales_report(request):
     elements.append(title)
     elements.append(Spacer(1, 20))
 
+    now = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+    generated_text = f"Report generated on: {now}"
+    elements.append(Paragraph(generated_text, styles['Normal']))
+    elements.append(Spacer(1, 10))
+
     # Summary of total sales and products sold
     sales_in_period = counter_sales.objects.filter(sale_date__gte=thirty_days)
     total_sales_amount = sales_in_period.aggregate(Sum('total'))['total__sum'] or 0
@@ -932,34 +1011,39 @@ def monthly_sales_report(request):
 
     # Main table: Individual sale items
     all_sales = sale_items.objects.filter(
-        sale__sale_date__gte=thirty_days
+    sale__sale_date__gte=thirty_days
     ).values_list(
-        'product__product_code',
-        'product__product_name',
-        'sale__seller_id__username',
-        'sale__total',
-        'sale__payment_method',
-        'sale__sale_date',
-        'sale__amount_tendered',
-        'sale__change',
-        flat=False
-    )
+    'product__product_code',
+    'product__product_name',
+    'sale__seller_id__username',
+    'quantity',
+    'price',
+    'sale__payment_method',
+    'sale__sale_date',
+    flat=False
+        )
 
-    data = [["Product Code", "Product Name", "Seller", "Total", "Payment Method", "Sale Date", "Amount Tendered", "Change"]]
+# Table headers
+    data = [["Product Code", "Product Name", "Seller", "Quantity", "Price", "Subtotal", "Payment Method", "Sale Date"]]
+
+# Populate table rows
     for sale_item in all_sales:
-        product_code, product_name, seller, total, payment_method, sale_date, amount_tendered, change = sale_item
+        product_code, product_name, seller, quantity, price, payment_method, sale_date = sale_item
+        subtotal = float(quantity) * float(price)
+
         data.append([
             product_code,
             product_name,
             seller,
-            str(total),
+            str(quantity),
+            f"Ksh {price:,.2f}",
+            f"Ksh {subtotal:,.2f}",
             payment_method,
             sale_date.strftime('%Y-%m-%d %H:%M:%S'),
-            str(amount_tendered) if amount_tendered is not None else "N/A",
-            str(change) if change is not None else "N/A",
         ])
 
-    table = Table(data, colWidths=[80, 180, 50, 80, 120, 100, 100, 50])
+    # Create and style the table
+    table = Table(data, colWidths=[80, 150, 70, 60, 70, 80, 100, 100])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -973,8 +1057,9 @@ def monthly_sales_report(request):
         ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),
     ]))
 
+    # Add table to report
     elements.append(table)
-    elements.append(Spacer(1, 30))  
+    elements.append(Spacer(1, 30))
 
     # Second table: Daily sales totals for the month
     daily_sales = (
@@ -1020,21 +1105,41 @@ def monthly_sales_report(request):
     elements.append(profit_title)
     elements.append(Spacer(1, 10))
 
-    profit_data = [["Product Code", "Product Name", "Total Revenue", "Total Cost", "Total Profit"]]
+    # Add "Stock Left" to table headers
+    profit_data = [
+        ["Code", "Name", "Selling Price", "Cost Price", "Quantity Sold", "Stock Left", "Revenue", "Cost", "Profit"]
+    ]
 
+    # Annotate each product's performance and remaining stock
     sales_profit = (
-        sale_items.objects.filter(sale__sale_date__gte=thirty_days)
-        .values('product__product_code', 'product__product_name')
-        .annotate(
-            total_revenue=Sum('sale__total'),
-            total_cost=Sum(F('quantity') * F('product__cost_price')),
-            total_profit=Sum(F('sale__total') - (F('quantity') * F('product__cost_price')))
+    sale_items.objects
+    .filter(sale__sale_date__gte=thirty_days)
+    .values('product__product_code', 'product__product_name','product__selling_price', 'product__cost_price', 'product__quantity')
+    .annotate(
+        quantity_sold=Sum('quantity'),
+        total_revenue=Sum(
+            ExpressionWrapper(F('quantity') * F('price'), output_field=DecimalField())
+        ),
+        total_cost=Sum(
+            ExpressionWrapper(F('quantity') * F('product__cost_price'), output_field=DecimalField())
+        ),
+        total_profit=Sum(
+            ExpressionWrapper(
+                F('price') * F('quantity') - F('quantity') * F('product__cost_price'),
+                output_field=DecimalField()
+            )
         )
     )
+)
 
+    # Populate the table rows
     for item in sales_profit:
         product_code = item['product__product_code']
         product_name = item['product__product_name']
+        selling_price = item['product__selling_price'] or 0
+        cost_price = item['product__cost_price'] or 0
+        stock_left = item['product__quantity'] or 0
+        quantity_sold = item['quantity_sold'] or 0
         total_revenue = item['total_revenue'] or 0
         total_cost = item['total_cost'] or 0
         total_profit = item['total_profit'] or 0
@@ -1042,12 +1147,17 @@ def monthly_sales_report(request):
         profit_data.append([
             product_code,
             product_name,
+            f"Ksh {selling_price:,.2f}",
+            f"Ksh {cost_price:,.2f}",
+            str(quantity_sold),
+            str(stock_left),
             f"Ksh {total_revenue:,.2f}",
             f"Ksh {total_cost:,.2f}",
             f"Ksh {total_profit:,.2f}"
         ])
 
-    profit_table = Table(profit_data, colWidths=[100, 180, 120, 120, 120])
+    # Define column widths (adjust as needed)
+    profit_table = Table(profit_data, colWidths=[80, 130, 80, 80, 80, 80, 100, 100, 100])
     profit_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -1061,15 +1171,25 @@ def monthly_sales_report(request):
     ]))
 
     elements.append(profit_table)
-
-    total_profit_earned = sales_profit.aggregate(total=Sum('total_profit'))['total'] or 0
-
-    profit_summary_text = (
-        f"<b>Total profit earned this month:</b> Ksh {total_profit_earned:,.2f}"
-    )
-    profit_summary = Paragraph(profit_summary_text, summary_style)
     elements.append(Spacer(1, 10))
+
+    # Total profit summary
+    total_profit_earned = sales_profit.aggregate(total=Sum('total_profit'))['total'] or 0
+    profit_summary_text = f"<b>Total profit earned this month:</b> Ksh {total_profit_earned:,.2f}"
+    profit_summary = Paragraph(profit_summary_text, summary_style)
+
     elements.append(profit_summary)
+    elements.append(Spacer(1, 10))
+
+    explanation_text = (
+    "Note: This analysis includes only products that were sold within the last 30 days. "
+    "Profit is calculated per product as: (Selling Price × Quantity Sold) − (Cost Price × Quantity Sold). "
+    "Stock values shown reflect historical cost prices at the time of sale. "
+    "Products not sold during the month are excluded from this report."
+)
+    explanation_paragraph = Paragraph(explanation_text, styles['Normal'])
+    elements.append(explanation_paragraph)
+
 
     # Build the PDF
     doc.build(elements)
@@ -1089,6 +1209,11 @@ def weekly_sales_report(request):
     title = Paragraph("Weekly Sales Report", styles['Title'])
     elements.append(title)
     elements.append(Spacer(1, 20))
+
+    now = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+    generated_text = f"Report generated on: {now}"
+    elements.append(Paragraph(generated_text, styles['Normal']))
+    elements.append(Spacer(1, 10))
     
     sales_in_period = counter_sales.objects.filter(sale_date__gte=seven_days)
     total_sales_amount = sales_in_period.aggregate(Sum('total'))['total__sum'] or 0
@@ -1104,19 +1229,25 @@ def weekly_sales_report(request):
     elements.append(Spacer(1, 20))
     
     all_sales = sale_items.objects.filter(sale__sale_date__gte=seven_days)
-    data = [["Product Code", "Product Name", "Seller", "Total", "Payment Method", "Sale Date", "Amount Tendered", "Change"]]
+    data = [["Product Code", "Product Name", "Seller", "Quantity Sold", "Price", "Subtotal", "Payment Method", "Sale Date"]]
+
     for sale_item in all_sales:
+        quantity = sale_item.quantity
+        price = sale_item.price
+        subtotal = quantity * price
+
         data.append([
             sale_item.product.product_code,
             sale_item.product.product_name,
             sale_item.sale.seller_id.username,
-            f"Ksh {sale_item.sale.total:,.2f}",
+            quantity,
+            f"Ksh {price:,.2f}",
+            f"Ksh {subtotal:,.2f}",
             sale_item.sale.payment_method,
             sale_item.sale.sale_date.strftime('%Y-%m-%d %H:%M:%S'),
-            f"Ksh {sale_item.sale.amount_tendered:,.2f}" if sale_item.sale.amount_tendered else "N/A",
-            f"Ksh {sale_item.sale.change:,.2f}" if sale_item.sale.change else "N/A",
         ])
-    table = Table(data, colWidths=[80, 180, 50, 80, 120, 100, 100, 50])
+
+    table = Table(data, colWidths=[80, 180, 50, 70, 70, 90, 120, 100])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -1127,9 +1258,12 @@ def weekly_sales_report(request):
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
     ]))
+
     elements.append(table)
     elements.append(Spacer(1, 30))
+
     
+    #Table for daily sales totals
     daily_sales = counter_sales.objects.filter(sale_date__gte=seven_days).annotate(day=TruncDate('sale_date', output_field=DateField())).values('day').annotate(daily_total=Sum('total')).order_by('day')
     daily_data = [["Day", "Total Sales Amount"]]
     for entry in daily_sales:
@@ -1153,36 +1287,78 @@ def weekly_sales_report(request):
     elements.append(Spacer(1, 30))
     
     # Sales Profit Analysis
-    profit_data = [["Product Name", "Total Sales", "Total Cost", "Profit"]]
-    total_profit = 0
-    
-    profit_query = sale_items.objects.filter(sale__sale_date__gte=seven_days).values('product__product_name').annotate(
-        total_sales=Sum(F('quantity') * F('price')),
-        total_cost=Sum(F('quantity') * F('product__cost_price'))
-    )
-    
-    for entry in profit_query:
-        profit = entry['total_sales'] - entry['total_cost']
-        total_profit += profit
-        profit_data.append([
-            entry['product__product_name'],
-            f"Ksh {entry['total_sales']:,.2f}",
-            f"Ksh {entry['total_cost']:,.2f}",
-            f"Ksh {profit:,.2f}",
-        ])
-    
-    elements.append(Paragraph("Sales Profit Analysis", styles['Heading2']))
+    # Weekly Sales Profit Analysis
+    elements.append(Paragraph("Sales Profit Analysis - Last 7 Days", styles['Heading2']))
     elements.append(Spacer(1, 10))
-    profit_table = Table(profit_data, colWidths=[200, 150, 150, 150])
+
+    profit_data = [["Product Name", "Selling Price", "Cost Price", "Quantity Sold", "Total Sales", "Total Cost", "Profit"]]
+    total_profit = 0
+
+    profit_query = (
+        sale_items.objects.filter(sale__sale_date__gte=seven_days)
+        .values(
+            'product__product_name',
+            'product__selling_price',
+            'product__cost_price'
+        )
+        .annotate(
+            quantity_sold=Sum('quantity'),
+            total_sales=Sum(F('quantity') * F('price')),
+            total_cost=Sum(F('quantity') * F('product__cost_price'))
+        )
+    )
+
+    for entry in profit_query:
+        product_name = entry['product__product_name']
+        selling_price = entry['product__selling_price']
+        cost_price = entry['product__cost_price']
+        quantity = entry['quantity_sold'] or 0
+        total_sales = entry['total_sales'] or 0
+        total_cost = entry['total_cost'] or 0
+        profit = total_sales - total_cost
+        total_profit += profit
+
+        profit_data.append([
+            product_name,
+            f"Ksh {selling_price:,.2f}",
+            f"Ksh {cost_price:,.2f}",
+            quantity,
+            f"Ksh {total_sales:,.2f}",
+            f"Ksh {total_cost:,.2f}",
+            f"Ksh {profit:,.2f}"
+        ])
+
+    profit_table = Table(profit_data, colWidths=[150, 80, 80, 80, 100, 100, 100])
     profit_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.lightgreen),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
+
     elements.append(profit_table)
     elements.append(Spacer(1, 10))
-    elements.append(Paragraph(f"Total Profit for the Week: <b>Ksh {total_profit:,.2f}</b>", summary_style))
+
+    summary_text = f"Total Profit for the Week: <b>Ksh {total_profit:,.2f}</b>"
+    elements.append(Paragraph(summary_text, summary_style))
+    elements.append(Spacer(1, 10))
+
+    explanation_text = (
+    "Note: This profit analysis is based only on products that were sold "
+    "within the last 7 days. The total sales are calculated as the sum of "
+    "<b>selling price × quantity sold</b> per product. Total cost is derived from "
+    "<b>cost price × quantity sold</b>. Products that were not sold in the period "
+    "are not included in this analysis. Selling prices are taken from the actual sale items, "
+    "not the current product listing."
+)
+
+    elements.append(Paragraph(explanation_text, styles['Normal'])) 
+
     
     doc.build(elements)
     return response
@@ -1191,7 +1367,8 @@ def weekly_sales_report(request):
 
 @permission_classes([IsAuthenticated,isManagerRole])
 def daily_sales_report(request):
-    one_day = timezone.now() - timedelta(days=1)
+    start_of_day = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
     reponse  = HttpResponse(content_type='application/pdf')
     reponse['Content-Disposition'] = 'attachment; filename="Daily Sales Report.pdf"'
     doc = SimpleDocTemplate(reponse, pagesize=landscape(A4), topMargin=50, bottomMargin=50, leftMargin=30, rightMargin=30)
@@ -1200,11 +1377,16 @@ def daily_sales_report(request):
     styles = getSampleStyleSheet()
     title = Paragraph("Daily Sales Report", styles['Title'])
     elements.append(title)
-    elements.append(Spacer(1, 20))  
+    elements.append(Spacer(1, 20))
+
+    now = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+    generated_text = f"Report generated on: {now}"
+    elements.append(Paragraph(generated_text, styles['Normal']))
+    elements.append(Spacer(1, 10))  
     
-    sales_in_period = counter_sales.objects.filter(sale_date__gte=one_day)
+    sales_in_period = counter_sales.objects.filter(sale_date__gte=start_of_day)
     total_sales_amount = sales_in_period.aggregate(Sum('total'))['total__sum'] or 0
-    total_products_sold = sale_items.objects.filter(sale__sale_date__gte=one_day).count()
+    total_products_sold = sale_items.objects.filter(sale__sale_date__gte=start_of_day).count()
 
     summary_style = ParagraphStyle(
         name='Summary',
@@ -1213,59 +1395,136 @@ def daily_sales_report(request):
         leading=16,   
     )
 
-    
+    # Summary of total sales and products sold
     summary_text = (
         f"In the last 1(one) day, total sales amount to <b>Ksh {total_sales_amount:,.2f}</b> "
         f"and total products sold are <b>{total_products_sold}</b>."
     )
     summary = Paragraph(summary_text, summary_style)
     elements.append(summary)
-    elements.append(Spacer(1, 20))  
+    elements.append(Spacer(1, 20))
+
+    
 
     all_sales = sale_items.objects.filter(
-        sale__sale_date__gte=one_day
+        sale__sale_date__gte=start_of_day
     ).values_list(
         'product__product_code',
         'product__product_name',
         'sale__seller_id__username',
-        'sale__total',
+        'quantity',
+        'price',
         'sale__payment_method',
         'sale__sale_date',
-        'sale__amount_tendered',
-        'sale__change',
         flat=False
     )
 
-
-    data = [["Product Code", "Product Name", "Seller", "Total", "Payment Method", "Sale Date", "Amount Tendered", "Change"]]
+    data = [["Product Code", "Product Name", "Seller", "Quantity", "Price", "Subtotal", "Payment Method", "Sale Date"]]
     for sale_item in all_sales:
-        product_code, product_name, seller, total, payment_method, sale_date, amount_tendered, change = sale_item
+        product_code, product_name, seller, quantity, price, payment_method, sale_date = sale_item
+        subtotal = float(quantity) * float(price)
         data.append([
             product_code,
             product_name,
             seller,
-            str(total),
+            str(quantity),
+            f"Ksh {price:,.2f}",
+            f"Ksh {subtotal:,.2f}",
             payment_method,
-            sale_date.strftime('%Y-%m-%d %H:%M:%S'),  
-            str(amount_tendered) if amount_tendered is not None else "N/A",
-            str(change) if change is not None else "N/A",
+            sale_date.strftime('%Y-%m-%d %H:%M:%S'),
         ])
 
-    table = Table(data, colWidths=[80, 180, 50, 80, 120, 100, 100, 50])  
+
+    table = Table(data, colWidths=[80, 160, 70, 70, 80, 90, 100, 100])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),  
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), 
-        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),  
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),
     ]))
+    
+
 
     elements.append(table)
+    elements.append(Spacer(1, 30))
+
+
+    #Sales profit analysis
+    # Daily Sales Profit Analysis
+    elements.append(Paragraph("Daily Sales Profit Analysis", styles['Heading2']))
+    elements.append(Spacer(1, 10))
+
+    # Prepare the data structure
+    daily_profit_data = [["Product Name", "Quantity Sold", "Unit Price", "Cost Price", "Subtotal", "Total Cost", "Profit"]]
+    daily_total_profit = 0
+
+    # Define start of day
+    start_of_day = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Query sales for today
+    daily_sales = sale_items.objects.filter(
+        sale__sale_date__gte=start_of_day
+    )
+
+    # Loop through each item sold
+    for item in daily_sales:
+        quantity = item.quantity
+        selling_price = item.price
+        cost_price = item.product.cost_price
+        subtotal = selling_price * quantity
+        total_cost = cost_price * quantity
+        profit = subtotal - total_cost
+        daily_total_profit += profit
+
+        daily_profit_data.append([
+            item.product.product_name,
+            str(quantity),
+            f"Ksh {selling_price:,.2f}",
+            f"Ksh {cost_price:,.2f}",
+            f"Ksh {subtotal:,.2f}",
+            f"Ksh {total_cost:,.2f}",
+            f"Ksh {profit:,.2f}",
+        ])
+
+    # Generate table
+    daily_profit_table = Table(daily_profit_data, colWidths=[150, 70, 80, 80, 90, 90, 90])
+    daily_profit_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.lightyellow),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    elements.append(daily_profit_table)
+    elements.append(Spacer(1, 10))
+
+    # Summary
+    summary = Paragraph(
+        f"<b>Total Profit for Today:</b> Ksh {daily_total_profit:,.2f}", summary_style
+    )
+    elements.append(summary)
+
+    # Note about data
+    note = Paragraph(
+        "Note: This analysis is based only on items sold within the current day and uses each product’s recorded cost price.",
+        styles['Italic']
+    )
+    elements.append(Spacer(1, 8))
+    elements.append(note)
+    elements.append(Spacer(1, 20))
+
+
+    
     doc.build(elements)
 
     return reponse
@@ -1292,7 +1551,12 @@ def single_product_report(request):
     styles = getSampleStyleSheet()
     title = Paragraph("Single Product Sales Report", styles['Title'])
     elements.append(title)
-    elements.append(Spacer(1, 20))  
+    elements.append(Spacer(1, 20))
+
+    now = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+    generated_text = f"Report generated on: {now}"
+    elements.append(Paragraph(generated_text, styles['Normal']))
+    elements.append(Spacer(1, 10))  
     
     # sales_in_period = counter_sales.objects.filter(s)
     # total_sales_amount = sales_in_period.aggregate(Sum('total'))['total__sum'] or 0
@@ -1398,6 +1662,11 @@ def custom_dates_report(request):
     title = Paragraph(f"Sales Report from {from_date_str} to {to_date_str}", styles['Title'])
     elements.append(title)
     elements.append(Spacer(1, 20))
+
+    now = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+    generated_text = f"Report generated on: {now}"
+    elements.append(Paragraph(generated_text, styles['Normal']))
+    elements.append(Spacer(1, 10))
 
     sales_in_period = counter_sales.objects.filter(
         sale_date__gte=from_date,
