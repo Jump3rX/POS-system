@@ -16,7 +16,7 @@ urlpatterns = [
     path('api/price-changes/<int:id>', views.price_changes, name='price_changes'),
     path('api/get-price-changes', views.get_price_changes, name='get_price_changes'),
     path('api/price-change-edit/<int:id>', views.price_changes_edit, name='price_change_edit'),
-
+    path("api/bulk-upload", views.bulk_upload, name="bulk-upload"),
     #================================================================================
 
     #====================Admin sales management routes========================
@@ -63,7 +63,7 @@ urlpatterns = [
     
     path("api/chart-data", views.chart_data, name="sales-report"),
     path("api/stock-data", views.stock_data, name="stock-data"),
-    path("api/bulk-upload", views.bulk_upload, name="bulk-upload"),
+    
     path("api/product-restock", views.product_restock, name="product-restock"),
     path("api/restock-delivery", views.get_restock_products, name="product-restock"),
     path("api/confirm-delivery", views.confirm_delivery),

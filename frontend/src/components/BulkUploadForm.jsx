@@ -10,24 +10,42 @@ function BulkUploadForm({ getProducts }) {
     if (!file) {
       alert("Please select file CSV to upload");
       return;
-    } else {
-      const formData = new FormData();
-      formData.append("file", file);
-      fetch("http://127.0.0.1:8000/api/bulk-upload", {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer " + String(authTokens.access),
-        },
-        body: formData,
+    }
+
+    if (file.type !== "text/csv") {
+      alert("Only CSV files are allowed.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    fetch("http://127.0.0.1:8000/api/bulk-upload", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + String(authTokens.access),
+      },
+      body: formData,
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const errorData = await res.json();
+          alert(`Error: ${errorData.message || "Upload failed"}`);
+          return;
+        }
+        return res.json();
       })
-        .then((res) => (!res.ok ? alert(`Error: ${res.message}`) : res.json()))
-        .then((data) => {
-          alert(`Success: ${data.message}`);
+      .then((data) => {
+        if (data) {
+          alert(`Success: ${data.message || "Products uploaded successfully"}`);
           setFile(null);
           getProducts();
-        })
-        .catch((err) => console.log(err));
-    }
+        }
+      })
+      .catch((err) => {
+        console.error("Upload error:", err);
+        alert("An unexpected error occurred.");
+      });
   }
 
   return (
@@ -38,6 +56,7 @@ function BulkUploadForm({ getProducts }) {
           type="file"
           accept=".csv"
           name="file"
+          value={file ? file.name : ""}
           className="form-input"
           onChange={(e) => setFile(e.target.files[0])}
         />

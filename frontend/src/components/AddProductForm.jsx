@@ -11,6 +11,7 @@ function AddProductForm({ handleAddNewProduct }) {
     cost_price: "",
     quantity: "",
     low_stock_level: "",
+    total_quantity: "",
     expiry_date: "",
     batch_number: "",
   });
@@ -26,13 +27,17 @@ function AddProductForm({ handleAddNewProduct }) {
       product.quantity &&
       product.low_stock_level
     ) {
+      const finalData = {
+        ...product,
+        total_quantity: product.quantity || 0,
+      };
       fetch("http://127.0.0.1:8000/api/add-product", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer " + String(authTokens.access),
         },
-        body: JSON.stringify({ product: product }),
+        body: JSON.stringify({ product: finalData }),
       })
         .then((res) => {
           if (!res.ok) {
@@ -53,6 +58,7 @@ function AddProductForm({ handleAddNewProduct }) {
             cost_price: "",
             quantity: "",
             low_stock_level: "",
+            total_quantity: "",
             expiry_date: "",
             batch_number: "",
           });
