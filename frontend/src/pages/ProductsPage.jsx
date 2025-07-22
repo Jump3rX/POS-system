@@ -101,7 +101,10 @@ function ProductsPage() {
           <div className="add-product-form-container">
             <BulkUploadForm getProducts={fetchProducts} />
             <hr />
-            <AddProductForm handleAddNewProduct={handleAddNewProduct} />
+            <AddProductForm
+              handleAddNewProduct={handleAddNewProduct}
+              fetchProducts={fetchProducts}
+            />
           </div>
         </div>
       </div>

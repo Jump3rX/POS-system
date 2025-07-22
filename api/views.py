@@ -80,7 +80,6 @@ def products_list(request):
 @permission_classes([IsAuthenticated,isManagerRole])
 def add_product(request):
     product_data = request.data.get('product')
-    print(f"Product Data: {product_data}")
     if not product_data:
         return Response({'message': 'Product data required!!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -153,6 +152,16 @@ def bulk_upload(request):
                 except:
                     total_quantity = 0
 
+                try:
+                    original_selling_price = selling_price
+                except:
+                    original_selling_price = 0
+
+                try:
+                    original_cost_price = cost_price
+                except:
+                    original_cost_price = 0
+
                 # Parse expiry date
                 expiry_date = None
                 expiry_str = row.get('expiry_date', '').strip()
@@ -174,7 +183,9 @@ def bulk_upload(request):
                         'low_stock_level': low_stock_level,
                         'total_quantity': total_quantity,
                         'expiry_date': expiry_date,
-                        'batch_number': batch_number
+                        'batch_number': batch_number,
+                        'original_selling_price': original_selling_price,
+                        'original_cost_price': original_cost_price,
                     }
                 )
                 if created:

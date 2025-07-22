@@ -256,14 +256,28 @@ thead {
 /*============================================*/
 
 /*============Products page styling===========*/
+/* .product-list-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: start;
+  margin-top: 20px;
+  gap: 50px;
+} */
 .product-list-container {
   display: flex;
   flex-direction: row;
   justify-content: center;
   align-items: start;
-  margin: 20px;
-  gap: 100px;
+  margin-top: 20px;
+  gap: 50px;
+  padding-left: 20px;
+  padding-right: 20px;
+  overflow-x: hidden;
+  box-sizing: border-box; /* Ensures padding doesn't increase total width */
+  width: 100%;
 }
+
 .products-table-container {
   background: #ebebeb;
   padding-top: 10px;
@@ -999,6 +1013,7 @@ thead {
   padding: 15px;
   border-radius: 13px;
 }
+/*Downloads Buttons*/
 .downloads-section {
   background-color: #ebebeb;
   padding: 15px;
@@ -1010,6 +1025,28 @@ thead {
 .downloads-section h2 {
   margin-bottom: 0px;
 }
+.downloads-section button {
+  display: block;
+  width: 100%;
+  padding: 10px 10px;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.downloads-section button:hover {
+  background-color: #1565c0;
+}
+
+.downloads-section button:active {
+  background-color: #0d47a1;
+}
+
+/*=============*/
+
 .custom-download-section {
   background: #ebebeb;
   padding: 15px;
@@ -1027,6 +1064,126 @@ thead {
   justify-content: center;
   align-items: baseline;
 }
+
+.custom-reports-input-container div {
+  flex: 1;
+  min-width: 280px;
+}
+
+.custom-reports-input-container h5 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.custom-reports-input-container label {
+  display: block;
+  margin-top: 10px;
+  font-weight: 500;
+  color: #444;
+}
+
+.custom-reports-input-container input[type="text"],
+.custom-reports-input-container input[type="date"] {
+  width: 100%;
+  padding: 10px 12px;
+  margin-top: 6px;
+  margin-bottom: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+.custom-reports-input-container button {
+  padding: 10px 16px;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.custom-reports-input-container button:hover {
+  background-color: #1565c0;
+}
+
+.auto-response-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 30px;
+  margin-top: 30px;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.auto-response-container div {
+  flex: 1;
+  min-width: 300px;
+}
+
+.auto-response-container h5 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.auto-response-container p,
+.auto-response-container small {
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.auto-response-container label {
+  display: block;
+  margin-top: 10px;
+  font-weight: 500;
+  color: #444;
+}
+
+.auto-response-container input[type="text"],
+.auto-response-container input[type="number"],
+.auto-response-container input[type="checkbox"],
+.auto-response-container select {
+  margin-top: 6px;
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+
+.auto-response-container input[type="text"],
+.auto-response-container input[type="number"],
+.auto-response-container select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.auto-response-container input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.auto-response-container button {
+  padding: 10px 16px;
+  background-color: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-top: 10px;
+}
+
+.auto-response-container button:hover {
+  background-color: #1b5e20;
+}
+
 /*============================================*/
 
 /*==================ROLE PAGE STYLING=========*/

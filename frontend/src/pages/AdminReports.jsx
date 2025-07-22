@@ -620,6 +620,7 @@ function AdminReports() {
                 <label htmlFor="productCode">Enter Product Code</label>
                 <input
                   id="productCode"
+                  type="text"
                   value={watchedProduct.product.product_code}
                   onChange={(e) => handleSetWatched(Number(e.target.value))}
                   required
@@ -630,6 +631,8 @@ function AdminReports() {
                 </label>
                 <input
                   id="alert-level"
+                  type="number"
+                  min="0"
                   value={watchedProduct.threshold}
                   onChange={(e) =>
                     setWatchedProduct({
@@ -638,6 +641,7 @@ function AdminReports() {
                     })
                   }
                 />
+                <br />
                 <button onClick={handleSaveWatchedProduct}>Add</button>
               </div>
             </div>

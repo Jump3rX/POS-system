@@ -1,7 +1,7 @@
 import React, { useState, useContext } from "react";
 import AuthContext from "../context/AuthContext";
 
-function AddProductForm({ handleAddNewProduct }) {
+function AddProductForm({ handleAddNewProduct, fetchProducts }) {
   let { authTokens, logoutUser } = useContext(AuthContext);
   const [product, setProduct] = useState({
     product_code: "",
@@ -12,8 +12,8 @@ function AddProductForm({ handleAddNewProduct }) {
     quantity: "",
     low_stock_level: "",
     total_quantity: "",
-    expiry_date: "",
-    batch_number: "",
+    expiry_date: "" || null,
+    batch_number: "" || null,
   });
 
   function handleSubmit(e) {
@@ -30,6 +30,8 @@ function AddProductForm({ handleAddNewProduct }) {
       const finalData = {
         ...product,
         total_quantity: product.quantity || 0,
+        original_selling_price: product.selling_price || 0,
+        original_cost_price: product.cost_price || 0,
       };
       fetch("http://127.0.0.1:8000/api/add-product", {
         method: "POST",
@@ -49,7 +51,7 @@ function AddProductForm({ handleAddNewProduct }) {
           }
         })
         .then((newProducts) => {
-          handleAddNewProduct(newProducts);
+          //handleAddNewProduct(newProducts);
           setProduct({
             product_code: "",
             product_name: "",
@@ -63,6 +65,7 @@ function AddProductForm({ handleAddNewProduct }) {
             batch_number: "",
           });
           alert("Product added successfully!");
+          fetchProducts();
         });
     } else {
       alert("Values cannot be empty!");
