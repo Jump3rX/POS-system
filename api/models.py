@@ -32,6 +32,8 @@ class products(models.Model):
     expiry_date = models.DateField(null=True, blank=True)
     batch_number = models.CharField(max_length=50, unique=True, null=True, blank=True)
     added_on = models.DateTimeField(auto_now_add=True)
+    original_selling_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0)  
+    original_cost_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0)
 
 
     class Meta:
@@ -46,6 +48,7 @@ class ScheduledPriceChanges(models.Model):
     new_cost_price = models.DecimalField(max_digits=10, decimal_places=2)
     activation_date = models.DateField(blank=True,null=True)
     end_date = models.DateField(blank=True, null=True)
+    is_active = models.BooleanField(default=False)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:

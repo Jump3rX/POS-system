@@ -56,7 +56,6 @@ function BulkUploadForm({ getProducts }) {
           type="file"
           accept=".csv"
           name="file"
-          value={file ? file.name : ""}
           className="form-input"
           onChange={(e) => setFile(e.target.files[0])}
         />

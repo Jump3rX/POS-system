@@ -120,7 +120,7 @@ function ProductsTable({ products = [], handleDelete, handleEdit }) {
               <td>{product.product_code}</td>
               <td>{product.product_name}</td>
               <td>{product.product_category}</td>
-              <td>{product.batch_number}</td>
+              <td>{product.batch_number || "-"}</td>
               <td>{product.selling_price}</td>
               <td>{product.cost_price}</td>
               <td>
