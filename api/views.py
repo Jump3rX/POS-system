@@ -3,7 +3,7 @@ from django.contrib.auth.models import User,Permission
 from django.contrib.auth import authenticate
 from django.utils.timezone import timedelta,now
 from django.utils import timezone
-from django.db.models import Sum,Value,F,DateField,ExpressionWrapper, FloatField,DecimalField
+from django.db.models import Sum,Value,F,DateField,ExpressionWrapper, FloatField,DecimalField,Count
 from django.db.models.functions import Concat,TruncDate
 from django.shortcuts import get_object_or_404
 from django.db import models
@@ -16,7 +16,7 @@ from django.core.exceptions import ValidationError
 from rest_framework.decorators import api_view,permission_classes
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import PriceChangesSerializer,autoEmailSerializer,ProductsSerializer,UserSerializer,ProfileSerializer,RoleSerializer,PermissionSerializer,UserProfileSerializer, addSalesSerializer, addSaleItemsSerializer,adminSalesViewSerializer, productRestockSerializer,restockDeliverySerializer, watchProductSerializer
+from .serializers import PriceChangesSerializer,autoEmailSerializer,ProductsSerializer,UserSerializer,ProfileSerializer,RoleSerializer,PermissionSerializer,UserProfileSerializer, addSalesSerializer, addSaleItemsSerializer,adminSalesViewSerializer, productRestockSerializer,restockDeliverySerializer, watchProductSerializer, CashierSalesSerializer
 from .models import products,Profile,counter_sales,sale_items,restock_orders,Role, auto_email_settings,WatchedProduct,ScheduledPriceChanges
 from rest_framework.permissions import IsAuthenticated
 
@@ -867,6 +867,60 @@ def inventory_report(request):
 
     doc.build(elements)
     return response
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def cashier_dashboard(request):
+    today = now().date()
+    user = request.user
+
+    last_login = user.last_login if user.last_login else "Never"
+    time = last_login.astimezone(timezone.get_current_timezone())
+
+    # Get today's sales by this user
+    sales_today = counter_sales.objects.filter(seller_id=user, sale_date__date=today)
+    serializer = CashierSalesSerializer(sales_today,many=True)
+
+    # Related sale items from those sales
+    items_today = sale_items.objects.filter(sale__in=sales_today)
+
+    # Count total number of sales
+    sales_made = sales_today.count()
+
+    # Total quantity of items sold
+    total_items_sold = items_today.aggregate(total=Sum('quantity'))['total'] or 0
+
+    # Total revenue collected
+    total_revenue = items_today.aggregate(total=Sum('price'))['total'] or 0
+
+    # Average revenue per sale
+    avg_sale = total_revenue / sales_made if sales_made else 0
+
+    # Most sold product (by quantity)
+    top_product = items_today.values('product__product_name')\
+        .annotate(total_quantity=Sum('quantity'))\
+        .order_by('-total_quantity')\
+        .first()
+
+    top_product_name = top_product['product__product_name'] if top_product else 'N/A'
+
+    return Response({
+        'username': user.username,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'email': user.email,
+        'last_login': last_login,
+        'sales_made': sales_made,
+        'total_items_sold': total_items_sold,
+        'total_revenue': float(total_revenue),
+        'average_sale_value': float(avg_sale),
+        'top_product': top_product_name,
+        'sales_today': serializer.data,
+    }, status=status.HTTP_200_OK)
+
+
+
+
 
 @permission_classes([IsAuthenticated,isManagerRole])
 def low_stock_products_report(request):
