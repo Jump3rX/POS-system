@@ -53,6 +53,11 @@ class adminSalesViewSerializer(serializers.ModelSerializer):
         model = counter_sales
         fields = '__all__'
 
+class CashierSalesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = counter_sales
+        fields = '__all__'
+
 class productRestockSerializer(serializers.ModelSerializer):
     product_id = serializers.CharField(source='product.id', read_only=True)
     product_name = serializers.CharField(source='product.product_name', read_only=True)

@@ -33,11 +33,14 @@ urlpatterns = [
     path('api/edit-employee/<int:id>',views.edit_employee, name='edit-employee'),
     path('api/delete-role/<int:id>',views.delete_role),
     path('api/edit-role/<int:id>',views.edit_role),
+
+
     #=============================================================================
 
     #======================CASHIER COUNTER SALES ROUTES==========================
     path('api/add-sale',views.add_sale,name='add-sale'),
     path("api/admin-confirm", views.admin_confirm, name="admin-confirm"),
+    path('api/cashier-dashboard',views.cashier_dashboard, name='cashier-dashboard'),
     #============================================================================
 
 
